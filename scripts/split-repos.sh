@@ -112,10 +112,8 @@ split_one() {
     fi
     git subtree split --prefix="$path" -b "$branch" >/dev/null 2>&1
     attach_license "$branch"
-    if false; then
-      echo "   推送到 $remote_show"
-      git push --force "$remote" "$branch:main"
-    fi
+    echo "   推送到 $remote_show"
+    git push --force "$remote" "$branch:main"
   else
     git subtree split --prefix="$path" -b "$branch" >/dev/null 2>&1
     attach_license "$branch"
