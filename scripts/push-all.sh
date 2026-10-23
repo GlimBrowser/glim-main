@@ -103,7 +103,10 @@ if [[ "$dirty" != "0" && "$ALLOW_DIRTY" != "1" ]]; then
 fi
 
 # --- 2. 子仓库可访问性预检（可选，--preflight）---
-# 注意：私有仓库在无凭证时 ls-remote 同样会失败，因此"失败"只代表无法确认，不代表不存在。
+# 注意：
+#   - 新创建的空仓库没有任何 ref，git ls-remote --exit-code 会返回 2（误判为不存在），
+#     因此这里**不使用 --exit-code**：只要能连上（exit 0）就视为可推送。
+#   - 私有仓库在无凭证时 ls-remote 会失败，因此"失败"只代表无法确认，不代表不存在。
 UNCONFIRMED_PATHS=()
 CONFIRMED_PATHS=()
 if [[ "$DO_SUBS" == "1" && "$DRY" != "1" && "$PREFLIGHT" == "1" ]]; then
@@ -112,7 +115,7 @@ if [[ "$DO_SUBS" == "1" && "$DRY" != "1" && "$PREFLIGHT" == "1" ]]; then
   while IFS='|' read -r path repo desc; do
     [[ -z "${path// }" || "${path:0:1}" == "#" ]] && continue
     total=$((total + 1))
-    if GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code "$(remote_url "$repo")" >/dev/null 2>&1; then
+    if GIT_TERMINAL_PROMPT=0 git ls-remote "$(remote_url "$repo")" >/dev/null 2>&1; then
       CONFIRMED_PATHS+=("$path")
     else
       UNCONFIRMED_PATHS+=("$path")
@@ -126,6 +129,12 @@ if [[ "$DO_SUBS" == "1" && "$DRY" != "1" && "$PREFLIGHT" == "1" ]]; then
       repo="$(awk -F'|' -v p="$p" '$1==p{print $2}' "$CONF")"
       echo "   - $(remote_display "${repo:-$p}")"
     done
+    if [[ ${#CONFIRMED_PATHS[@]} -eq 0 ]]; then
+      sample_repo="$(awk -F'|' 'NF>1 && $1 !~ /^#/{print $2; exit}' "$CONF")"
+      echo "   诊断样本（$(remote_display "${sample_repo}")）："
+      GIT_TERMINAL_PROMPT=0 git ls-remote "$(remote_url "${sample_repo}")" 2>&1 | head -3 | sed 's/^/     /'
+      echo
+    fi
     echo "   私有仓库请设置凭证后重试："
     echo "     SPLIT_TOKEN=<有 repo 权限的 PAT> ./scripts/push-all.sh"
     echo "   或确认 SSH key 已加入 GitHub 账户。"
