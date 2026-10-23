@@ -88,6 +88,10 @@ if [[ "$USE_GH" == "1" ]]; then
     fi
     SPLIT_TOKEN="$TOKEN"
     export SPLIT_TOKEN
+  else
+    # dry-run：用占位 token，让拆分子仓库的命令也按 HTTPS 形态打印（显示时会被掩码）
+    SPLIT_TOKEN="${SPLIT_TOKEN:-DRY_RUN_TOKEN}"
+    export SPLIT_TOKEN
   fi
   SPLIT_REMOTE_BASE="${SPLIT_REMOTE_BASE:-https://github.com/$ORG}"
   echo "== 使用 gh（HTTPS）推送；远端前缀：$SPLIT_REMOTE_BASE"
