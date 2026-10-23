@@ -15,6 +15,8 @@
 #   SPLIT_ORG     组织名（默认 GlimBrowser）
 #   GIT_REMOTE   主仓库远端名（默认 origin）
 #   GIT_BRANCH   主分支名（默认当前分支）
+#   SPLIT_TOKEN      有 repo 权限的 PAT（私有仓库走 HTTPS）
+#   SPLIT_REMOTE_BASE 子仓库远端前缀（默认 git@github.com:<ORG>；用 HTTPS 时设为 https://github.com/<ORG>）
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -60,7 +62,7 @@ remote_url() {
   if [[ -n "${SPLIT_TOKEN:-}" ]]; then
     echo "https://x-access-token:${SPLIT_TOKEN}@github.com/${ORG}/${repo}.git"
   else
-    echo "git@github.com:${ORG}/${repo}.git"
+    echo "${SPLIT_REMOTE_BASE:-git@github.com:$ORG}/${repo}.git"
   fi
 }
 
@@ -70,7 +72,7 @@ remote_display() {
   if [[ -n "${SPLIT_TOKEN:-}" ]]; then
     echo "https://x-access-token:***@github.com/${ORG}/${repo}.git"
   else
-    echo "git@github.com:${ORG}/${repo}.git"
+    echo "${SPLIT_REMOTE_BASE:-git@github.com:$ORG}/${repo}.git"
   fi
 }
 
