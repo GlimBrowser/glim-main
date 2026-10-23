@@ -42,7 +42,18 @@
 
 脚本执行 `git subtree split --prefix=<子目录> -b split/<仓库名>`，在本地生成 `split/<仓库名>` 分支，包含该子目录的完整历史（路径已重写为仓库根）。
 
-## 三、创建子仓库并推送
+## 三、一键发布（推荐）
+
+```bash
+./scripts/push-all.sh --dry-run          # 预览
+./scripts/push-all.sh -m "feat: xxx"     # 提交 + 推主仓库 + 推全部子仓库
+./scripts/push-all.sh --main-only        # 只推主仓库（完整项目）
+./scripts/push-all.sh --subs-only        # 只推子仓库
+```
+
+脚本会先做：工作区检查 → 子仓库存在性预检（`git ls-remote`）→ 推主仓库 → 逐个 `subtree split` 并推送。
+
+## 四、创建子仓库并推送
 
 ### 3.1 在组织下创建空仓库
 
@@ -71,7 +82,7 @@ SPLIT_ORG=GlimBrowser SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push
 
 推送使用 `--force`，因为每次 `subtree split` 都会重写历史（子仓库不要直接提交，否则会被覆盖）。
 
-## 四、CI 自动拆分
+## 五、CI 自动拆分
 
 [`.github/workflows/split-repos.yml`](.github/workflows/split-repos.yml) 在推送到 `main` 时自动拆分并推送。
 
@@ -84,7 +95,7 @@ SPLIT_ORG=GlimBrowser SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push
 
 > 若使用 SSH，可改成 deploy key；工作流里默认用 `https://x-access-token:$SPLIT_TOKEN@github.com/GlimBrowser/<repo>.git`。
 
-## 五、作为依赖引用
+## 六、作为依赖引用
 
 子仓库是**只读镜像**，建议用 git submodule 或直接依赖源码目录：
 
@@ -99,7 +110,7 @@ git submodule add https://github.com/GlimBrowser/glim-adfilter.git libs/glim-adf
 - 想作为库引用 → 在 `settings.gradle.kts` 里 `includeBuild`/组合构建，或把源码复制进你的工程；
 - 想发布到 Maven → 需要给每个子仓库补一份独立的构建脚本（当前未做）。
 
-## 六、常见问题
+## 七、常见问题
 
 **Q：拆出来的子仓库能单独编译吗？**
 A：不能直接编译（缺根 Gradle 配置与版本目录）。它们是"代码镜像"，用于阅读、追溯历史、被 submodule 引用。
