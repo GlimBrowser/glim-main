@@ -63,6 +63,20 @@ if [[ "$MODE" == "list" ]]; then
   exit 0
 fi
 
+# 把根仓库的 LICENSE/NOTICE 追加到拆分分支（子仓库不能"无许可证"分发）
+attach_license() {
+  local branch="$1"
+  local tmp
+  tmp="$(mktemp -d)"
+  git worktree add -q "$tmp" "$branch"
+  if [[ ! -f "$tmp/LICENSE" ]]; then
+    cp LICENSE NOTICE "$tmp"/
+    git -C "$tmp" add LICENSE NOTICE
+    git -C "$tmp" commit -q -m "chore: 继承根仓库许可证（GlimBrowser Non-Commercial 1.0）"
+  fi
+  git worktree remove "$tmp" --force
+}
+
 split_one() {
   local path="$1" repo="$2" desc="$3"
   if [[ -n "$ONLY" && "$path" != "$ONLY" ]]; then return 0; fi
@@ -76,10 +90,13 @@ split_one() {
   local count
   count="$(git ls-files "$path" | wc -l | tr -d ' ')"
 
-  echo "→ $path → $repo（$count 个文件）"
+  echo "→ ${path} → ${repo}（${count} 个文件）"
+  # 每次都从当前 main 重拆：先删除旧分支（否则 subtree split 会因分支已存在而失败）
+  git branch -D "$branch" >/dev/null 2>&1 || true
 
   if [[ "$MODE" == "push" ]]; then
     git subtree split --prefix="$path" -b "$branch" >/dev/null
+    attach_license "$branch"
     if [[ "$DRY_RUN" == "1" ]]; then
       echo "   [dry-run] git push --force $remote $branch:main"
     else
@@ -88,7 +105,8 @@ split_one() {
     fi
   else
     git subtree split --prefix="$path" -b "$branch" >/dev/null
-    echo "   已创建本地分支 $branch（$(git rev-parse --short "$branch")）"
+    attach_license "$branch"
+    echo "   已创建本地分支 ${branch}（$(git rev-parse --short "${branch}")）"
   fi
 }
 
@@ -98,7 +116,7 @@ if [[ -n "$ONLY" ]]; then
     IFS='|' read -r path repo desc <<< "$e"
     [[ "$path" == "$ONLY" ]] && found=1
   done
-  [[ "$found" == "1" ]] || { echo "清单里没有 $ONLY（用 --list 查看）"; exit 1; }
+  [[ "$found" == "1" ]] || { echo "清单里没有 ${ONLY}（用 --list 查看）"; exit 1; }
 fi
 
 for e in "${entries[@]}"; do

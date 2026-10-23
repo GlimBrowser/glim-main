@@ -202,6 +202,23 @@ SPLIT_ORG=your-org ./scripts/split-repos.sh --push
 
 细节、远端初始化与 CI（`.github/workflows/split-repos.yml`）见 [SUBREPOS.md](SUBREPOS.md)。
 
+## 发布前检查清单
+
+开源前请替换以下占位符（当前是模板值）：
+
+| 文件 | 占位符 | 替换为 |
+|---|---|---|
+| `README.md`、`NOTICE`、`LICENSE` | `<填写你的商务联系邮箱>` | 你的商业授权联系邮箱 |
+| `README.md` | `https://github.com/<填写你的 GitHub 组织或用户名>/GlimBrowser` | 仓库真实地址 |
+| `.github/workflows/split-repos.yml` | `vars.SPLIT_ORG` / `secrets.SPLIT_TOKEN` | 组织名与 PAT |
+| `scripts/split-repos.sh` | `SPLIT_ORG` 默认值 `<your-org>` | 你的组织名 |
+
+另外确认：
+
+- `docs/`（PRD、进展记录）**不会**被发布（已在 `.gitignore` 排除）
+- `local.properties`、`*.jks`、`keystore.properties` 未入库
+- 子仓库同样带 `LICENSE`（拆分脚本会自动附加）
+
 ## 贡献
 
 - 提交前请跑一遍上面的编译与测试命令
