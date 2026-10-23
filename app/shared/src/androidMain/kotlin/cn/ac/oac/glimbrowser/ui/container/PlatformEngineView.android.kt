@@ -162,8 +162,13 @@ class AndroidWebViewEngine(
     }
 
     internal fun notifyError(url: String, description: String) {
-        // 隐藏内核自带错误页（Chromium "Webpage not available"），由共享层错误卡呈现
-        webView?.visibility = android.view.View.INVISIBLE
+        // 隐藏内核自带错误页（Chromium "Webpage not available"），由共享层错误卡呈现。
+        // 用 GONE 而不是 INVISIBLE：平台视图（WebView）在 Android 上可能盖住 Compose 叠加层。
+        webView?.apply {
+            visibility = android.view.View.GONE
+            alpha = 0f
+        }
+        android.util.Log.w("GlimBrowser", "page error: $url — $description")
         listener?.onError(url, description)
     }
 
@@ -206,6 +211,7 @@ class AndroidWebViewEngine(
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
             view?.visibility = android.view.View.VISIBLE   // 重试/新导航时恢复显示
+            view?.alpha = 1f
             listener?.onProgress(url ?: "", 0f)
         }
 
@@ -226,6 +232,15 @@ class AndroidWebViewEngine(
         }
 
         override fun onReceivedTitle(view: WebView?, title: String?) {
+            val t = title.orEmpty()
+            val looksLikeError = listOf(
+                "Webpage not available", "网页无法打开", "无法访问此网站", "网页无法访问",
+                "Site can't be reached", "This site can", "ERR_",
+            ).any { t.contains(it, ignoreCase = true) }
+            if (looksLikeError) {
+                // 内核错误页标题 → 主动切到可读错误卡（带重试），避免停在空白页
+                notifyError(view?.url.orEmpty(), "网页访问失败：请检查网络，或稍后重试")
+            }
             listener?.onReceivedTitle(title)
         }
     }
