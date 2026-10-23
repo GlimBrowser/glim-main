@@ -1,6 +1,6 @@
 # GlimBrowser · 清舟浏览器
 
-> 仓库组织：**https://github.com/GlimBrowser** ｜ 主仓库：**https://github.com/GlimBrowser/GlimBrowser**
+> 仓库组织：**https://github.com/GlimBrowser** ｜ 主仓库：**glim-main** — https://github.com/GlimBrowser/glim-main
 
 > 一个用 Kotlin Multiplatform + Compose Multiplatform 写成的多页浏览器。手机、平板、桌面共用一套内核抽象与界面组件，网页渲染交给各平台原生引擎（Android WebView / iOS WKWebView / 桌面与 Web 走 JVM 与浏览器）。
 
@@ -103,7 +103,7 @@
 ### 获取代码
 
 ```bash
-git clone https://github.com/GlimBrowser/GlimBrowser.git
+git clone https://github.com/GlimBrowser/glim-main.git
 cd GlimBrowser
 ```
 

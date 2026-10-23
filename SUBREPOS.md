@@ -1,6 +1,6 @@
 # 子仓库拆分说明
 
-> GitHub 组织：https://github.com/GlimBrowser ｜ 主仓库：https://github.com/GlimBrowser/GlimBrowser
+> GitHub 组织：https://github.com/GlimBrowser ｜ 主仓库：https://github.com/GlimBrowser/glim-main
 >
 > 子仓库默认创建在该组织下，例如 `https://github.com/GlimBrowser/glim-network`。
 
