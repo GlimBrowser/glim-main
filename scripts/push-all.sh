@@ -8,8 +8,8 @@
 #   ./scripts/push-all.sh --subs-only            # 只推子仓库
 #   ./scripts/push-all.sh -m "feat: xxx"         # 先提交全部改动，再推送
 #   ./scripts/push-all.sh --allow-dirty          # 允许工作区有未提交改动（不建议）
-#   ./scripts/push-all.sh --check-only           # 只做子仓库存在性预检，不推送
-#   ./scripts/push-all.sh --no-skip-missing      # 缺失子仓库也强行推送（会失败）
+#   ./scripts/push-all.sh --preflight            # 先探测子仓库可访问性（私有仓库需凭证，否则只提示"无法确认"）
+#   ./scripts/push-all.sh --skip-missing         # 跳过探测失败的子仓库（默认不跳过）
 #
 # 环境变量：
 #   SPLIT_ORG     组织名（默认 GlimBrowser）
@@ -41,6 +41,7 @@ while [[ $# -gt 0 ]]; do
     --allow-dirty) ALLOW_DIRTY=1; shift ;;
     --check-only) CHECK_ONLY=1; shift ;;
     --no-skip-missing) SKIP_MISSING=0; shift ;;
+    --preflight) PREFLIGHT=1; shift ;;
     --no-preflight) PREFLIGHT=0; shift ;;
     -m|--message) COMMIT_MSG="${2:-}"; shift 2 ;;
     -h|--help) usage ;;
@@ -52,6 +53,26 @@ cd "$ROOT"
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "不是 git 仓库"; exit 1; }
 [[ -n "$BRANCH" ]] || BRANCH="$(git branch --show-current)"
 [[ -n "$BRANCH" ]] || { echo "无法确定当前分支（detached HEAD？）"; exit 1; }
+
+# 子仓库远端：优先 PAT（HTTPS），否则 SSH。
+remote_url() {
+  local repo="$1"
+  if [[ -n "${SPLIT_TOKEN:-}" ]]; then
+    echo "https://x-access-token:${SPLIT_TOKEN}@github.com/${ORG}/${repo}.git"
+  else
+    echo "git@github.com:${ORG}/${repo}.git"
+  fi
+}
+
+# 打印用（隐藏 token）
+remote_display() {
+  local repo="$1"
+  if [[ -n "${SPLIT_TOKEN:-}" ]]; then
+    echo "https://x-access-token:***@github.com/${ORG}/${repo}.git"
+  else
+    echo "git@github.com:${ORG}/${repo}.git"
+  fi
+}
 
 run() {
   if [[ "$DRY" == "1" ]]; then echo "  [dry-run] $*"; else "$@"; fi
@@ -81,41 +102,37 @@ if [[ "$dirty" != "0" && "$ALLOW_DIRTY" != "1" ]]; then
   exit 1
 fi
 
-# --- 2. 子仓库存在性预检（ls-remote，不需要 gh）---
-MISSING_PATHS=()
-EXISTING_PATHS=()
+# --- 2. 子仓库可访问性预检（可选，--preflight）---
+# 注意：私有仓库在无凭证时 ls-remote 同样会失败，因此"失败"只代表无法确认，不代表不存在。
+UNCONFIRMED_PATHS=()
+CONFIRMED_PATHS=()
 if [[ "$DO_SUBS" == "1" && "$DRY" != "1" && "$PREFLIGHT" == "1" ]]; then
-  echo "== 预检子仓库是否存在（https）..."
-  fail_count=0
+  echo "== 预检子仓库可访问性（$([[ -n "${SPLIT_TOKEN:-}" ]] && echo "HTTPS + PAT" || echo "SSH")）..."
   total=0
   while IFS='|' read -r path repo desc; do
     [[ -z "${path// }" || "${path:0:1}" == "#" ]] && continue
     total=$((total + 1))
-    if git ls-remote --exit-code "https://github.com/$ORG/$repo.git" >/dev/null 2>&1; then
-      EXISTING_PATHS+=("$path")
+    if GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code "$(remote_url "$repo")" >/dev/null 2>&1; then
+      CONFIRMED_PATHS+=("$path")
     else
-      MISSING_PATHS+=("$path")
-      fail_count=$((fail_count + 1))
+      UNCONFIRMED_PATHS+=("$path")
     fi
   done < "$CONF"
 
-  if [[ ${#MISSING_PATHS[@]} -gt 0 ]]; then
-    echo "!! 有 ${#MISSING_PATHS[@]}/${total} 个子仓库不存在或无权限："
-    for p in "${MISSING_PATHS[@]}"; do
+  echo "   可访问：${#CONFIRMED_PATHS[@]}/${total}；无法确认：${#UNCONFIRMED_PATHS[@]}/${total}"
+  if [[ ${#UNCONFIRMED_PATHS[@]} -gt 0 ]]; then
+    echo "   以下仓库无法确认（私有仓库/无凭证/无网络都会这样，**不代表不存在**）："
+    for p in "${UNCONFIRMED_PATHS[@]}"; do
       repo="$(awk -F'|' -v p="$p" '$1==p{print $2}' "$CONF")"
-      echo "   - https://github.com/$ORG/${repo:-$p}"
+      echo "   - $(remote_display "${repo:-$p}")"
     done
-    if [[ "$fail_count" == "$total" ]]; then
-      echo "   全部失败，可能原因："
-      echo "     a) 组织下还没创建这些仓库 → 运行 ./scripts/create-repos.sh"
-      echo "     b) 本机无网络 / 没有该组织的访问凭证（PAT 或 SSH key）"
-      echo "   可先用浏览器打开 https://github.com/orgs/$ORG/repositories 确认。"
-      echo "   网络或凭证暂时不可用时，可加 --no-preflight 直接推送。"
-    fi
-    echo "   创建：./scripts/create-repos.sh        （或手动在 https://github.com/orgs/$ORG/repositories/new 新建）"
+    echo "   私有仓库请设置凭证后重试："
+    echo "     SPLIT_TOKEN=<有 repo 权限的 PAT> ./scripts/push-all.sh"
+    echo "   或确认 SSH key 已加入 GitHub 账户。"
     if [[ "$SKIP_MISSING" == "1" ]]; then
-      echo "   本次将跳过不存在的子仓库，只推送已存在的 $((total - fail_count)) 个。"
-      echo "   （想强行全部推送：加 --no-skip-missing）"
+      echo "   --skip-missing 已开启：只推送可访问的 ${#CONFIRMED_PATHS[@]} 个。"
+    else
+      echo "   默认不跳过，仍会尝试推送全部 ${total} 个。"
     fi
     echo
   fi
@@ -123,7 +140,7 @@ fi
 
 if [[ "$CHECK_ONLY" == "1" ]]; then
   echo "== 仅检查（--check-only），不推送"
-  echo "   存在：${#EXISTING_PATHS[@]}  缺失：${#MISSING_PATHS[@]}"
+  echo "   可访问：${#CONFIRMED_PATHS[@]}  无法确认：${#UNCONFIRMED_PATHS[@]}"
   exit 0
 fi
 
@@ -140,11 +157,11 @@ if [[ "$DO_SUBS" == "1" ]]; then
   echo "== 拆分并推送子仓库"
   if [[ "$DRY" == "1" ]]; then
     SPLIT_ORG="$ORG" SPLIT_DRY_RUN=1 "$ROOT/scripts/split-repos.sh" --push
-  elif [[ "$SKIP_MISSING" == "1" && ${#MISSING_PATHS[@]} -gt 0 ]]; then
-    if [[ ${#EXISTING_PATHS[@]} -eq 0 ]]; then
-      echo "   没有已存在的子仓库，跳过。创建后重跑：./scripts/create-repos.sh"
+  elif [[ "$SKIP_MISSING" == "1" && ${#UNCONFIRMED_PATHS[@]} -gt 0 ]]; then
+    if [[ ${#CONFIRMED_PATHS[@]} -eq 0 ]]; then
+      echo "   没有可确认的子仓库，跳过（去掉 --skip-missing 可强制尝试）"
     else
-      for p in "${EXISTING_PATHS[@]}"; do
+      for p in "${CONFIRMED_PATHS[@]}"; do
         SPLIT_ORG="$ORG" "$ROOT/scripts/split-repos.sh" --push --only "$p" || true
       done
     fi

@@ -7,6 +7,7 @@
 #   ./scripts/split-repos.sh --branch --only shared/network
 #   SPLIT_ORG=GlimBrowser ./scripts/split-repos.sh --push     拆分并推送
 #   SPLIT_ORG=GlimBrowser SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push  只看命令
+#   SPLIT_TOKEN=<PAT> ./scripts/split-repos.sh --push   私有仓库走 HTTPS + PAT
 #
 # 说明：
 #   - 拆分出来的仓库只含该子目录内容，**不含根目录的 Gradle 文件**；
@@ -86,7 +87,14 @@ split_one() {
   fi
 
   local branch="split/$repo"
-  local remote="git@github.com:$ORG/$repo.git"
+  local remote
+  if [[ -n "${SPLIT_TOKEN:-}" ]]; then
+    remote="https://x-access-token:${SPLIT_TOKEN}@github.com/$ORG/$repo.git"
+  else
+    remote="git@github.com:$ORG/$repo.git"
+  fi
+  local remote_show="git@github.com:$ORG/$repo.git"
+  [[ -n "${SPLIT_TOKEN:-}" ]] && remote_show="https://x-access-token:***@github.com/$ORG/$repo.git"
   local count
   count="$(git ls-files "$path" | wc -l | tr -d ' ')"
 
@@ -97,13 +105,13 @@ split_one() {
   if [[ "$MODE" == "push" ]]; then
     if [[ "$DRY_RUN" == "1" ]]; then
       echo "   [dry-run] git subtree split --prefix=$path -b $branch"
-      echo "   [dry-run] git push --force $remote $branch:main"
+      echo "   [dry-run] git push --force $remote_show $branch:main"
       return 0
     fi
     git subtree split --prefix="$path" -b "$branch" >/dev/null 2>&1
     attach_license "$branch"
     if false; then
-      echo "   推送到 $remote"
+      echo "   推送到 $remote_show"
       git push --force "$remote" "$branch:main"
     fi
   else

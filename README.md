@@ -194,39 +194,21 @@ iOS：用 Xcode 打开 `app/iosApp`，选择模拟器或真机运行。
 
 这不是 OSI 认可的开源许可证，而是 **source-available（源码可用）**。若你需要真正的开源许可证（如 Apache-2.0 / MIT），可以自行替换 `LICENSE`，但这与"限制商业使用"的目标冲突，请先想清楚。
 
-## 子仓库（拆分展示）
+## 发布（可选）
 
-主仓库 `GlimBrowser` 包含**完整项目**（所有模块、壳工程、构建配置）。子仓库是拆出来的**只读镜像**，用于单独浏览、引用与讨论某个模块。
-
-| 子仓库 | 内容 |
-|---|---|
-| [glim-app-shared](https://github.com/GlimBrowser/glim-app-shared) | KMP 浏览器内核抽象、Compose UI、状态管理 |
-| [glim-network](https://github.com/GlimBrowser/glim-network) | OpenAI 兼容协议、SSE 解析、错误映射 |
-| [glim-agent](https://github.com/GlimBrowser/glim-agent) | AI Agent 编排、工具 Schema、JSON 兜底链 |
-| [glim-adfilter](https://github.com/GlimBrowser/glim-adfilter) | 去广告规则引擎（ABP 子集）与净化统计 |
-| [glim-data](https://github.com/GlimBrowser/glim-data) | SQLDelight schema 与仓库实现 |
-| [glim-plugin](https://github.com/GlimBrowser/glim-plugin) | 用户脚本解析、权限模型、订阅 |
-| [glim-ui-adaptive](https://github.com/GlimBrowser/glim-ui-adaptive) | 窗口宽度分级与自适应布局决策 |
-| [glim-window](https://github.com/GlimBrowser/glim-window) | 多窗口状态机与快捷键映射 |
-| [glim-android](https://github.com/GlimBrowser/glim-android) | Android 壳（WebView 引擎、主题、图标） |
-| [glim-ios](https://github.com/GlimBrowser/glim-ios) | iOS 壳（WKWebView、Xcode 工程） |
-| [glim-desktop](https://github.com/GlimBrowser/glim-desktop) | 桌面壳（Compose Desktop、打包） |
-| [glim-web](https://github.com/GlimBrowser/glim-web) | Web 壳（Wasm / JS） |
-| [glim-tools](https://github.com/GlimBrowser/glim-tools) | 图标生成等开发工具 |
-
-### 发布
+主仓库包含完整项目，**不内嵌子仓库代码**。需要单独发布某个模块时，用拆分脚本生成独立仓库（只读镜像）：
 
 ```bash
-./scripts/create-repos.sh --dry-run    # 先看要在组织下创建哪些仓库
-./scripts/create-repos.sh              # 在 GlimBrowser 组织下创建空仓库
-./scripts/push-all.sh -m "feat: ..."   # 提交 + 推主仓库 + 拆分推送全部子仓库
+./scripts/create-repos.sh --dry-run    # 预演：组织下会创建哪些仓库
+./scripts/create-repos.sh              # 创建空仓库（需 gh 登录 + 组织权限）
+./scripts/push-all.sh -m "feat: ..."   # 提交 + 推主仓库 + 拆分推送子仓库
 ./scripts/push-all.sh --main-only      # 只推主仓库
 ./scripts/push-all.sh --subs-only      # 只推子仓库
 ./scripts/push-all.sh --dry-run        # 只看会执行什么
 ```
 
-细分控制用 `scripts/split-repos.sh`（`--list` / `--branch` / `--push` / `--only <子目录>`）。
-细节、远端初始化与 CI（`.github/workflows/split-repos.yml`）见 [SUBREPOS.md](SUBREPOS.md)。
+私有仓库请设置 `SPLIT_TOKEN`（有 `repo` 权限的 PAT），脚本会自动走 HTTPS；否则默认用 SSH。
+拆分原理、凭证与 CI（`.github/workflows/split-repos.yml`）见 [SUBREPOS.md](SUBREPOS.md)。
 
 ## 发布前检查清单
 
