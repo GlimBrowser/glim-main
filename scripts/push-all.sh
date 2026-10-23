@@ -111,6 +111,9 @@ if [[ "$DO_SUBS" == "1" ]]; then
   echo
 fi
 
+repo_name="$(basename "$(git remote get-url "$REMOTE" 2>/dev/null || echo "$ROOT")" .git)"
+[[ -n "$repo_name" && "$repo_name" != "." ]] || repo_name="$(basename "$ROOT")"
+
 echo "== 全部完成"
-echo "   主仓库：https://github.com/$ORG/${REMOTE##*/}"
+echo "   主仓库：https://github.com/$ORG/$repo_name"
 [[ "$DO_SUBS" == "1" ]] && echo "   子仓库：见 https://github.com/orgs/$ORG/repositories"
