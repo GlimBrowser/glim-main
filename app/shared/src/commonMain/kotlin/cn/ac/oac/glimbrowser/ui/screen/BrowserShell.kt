@@ -182,15 +182,9 @@ private fun CompactShell(
                     query = state.searchQuery,
                     onQueryChange = { dispatch(BrowserController.Event.SetSearchQuery(it)) },
                     onSubmit = { q ->
-                        val r = cn.ac.oac.glimbrowser.logic.resolveAddressBarInput(
-                            q, cn.ac.oac.glimbrowser.logic.SearchEngine.GOOGLE,
-                        )
-                        val target = when (r.intent) {
-                            cn.ac.oac.glimbrowser.logic.AddressBarIntent.NAVIGATE -> r.normalizedUrl ?: r.value
-                            else -> r.value
-                        }
-                        if (target.isNotBlank()) {
-                            dispatch(BrowserController.Event.OpenUrlInNewTab(target))
+                        if (q.isNotBlank()) {
+                            dispatch(BrowserController.Event.AddressBarInput(q))
+                            dispatch(BrowserController.Event.SubmitAddressBar)
                             dispatch(BrowserController.Event.CloseSearch)
                         }
                     },
@@ -210,7 +204,7 @@ private fun CompactShell(
                 else -> BrowserScreen(
                     tab = state.currentTab,
                     shieldCount = state.adFilter.stats.currentPageCount,
-                    onAddressBarClick = { dispatch(BrowserController.Event.AddressBarFocus(true)) },
+                    onAddressBarClick = { dispatch(BrowserController.Event.OpenSearch) },
                     onShieldClick = { dispatch(BrowserController.Event.TogglePurifyReport(true)) },
                     onAiClick = { dispatch(BrowserController.Event.AiEntry) },
                     onBack = { navDispatch(BrowserController.Event.RequestBack) },
@@ -275,15 +269,6 @@ private fun CompactShell(
             }
 
             // 地址栏聚焦编辑态（Phase 2 简化：覆盖一层输入提示；Phase 3 接真实输入框 + 建议列表）
-            if (state.addressBarFocused) {
-                AddressBarEditorOverlay(
-                    input = state.addressBarInput,
-                    onInputChange = { dispatch(BrowserController.Event.AddressBarInput(it)) },
-                    onSubmit = { dispatch(BrowserController.Event.SubmitAddressBar) },
-                    onCancel = { dispatch(BrowserController.Event.AddressBarFocus(false)) },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
 
             // 三步引导（真实测试连接）
             if (state.apiGuideVisible) {
@@ -814,15 +799,9 @@ private fun ExpandedShell(
                     query = state.searchQuery,
                     onQueryChange = { dispatch(BrowserController.Event.SetSearchQuery(it)) },
                     onSubmit = { q ->
-                        val r = cn.ac.oac.glimbrowser.logic.resolveAddressBarInput(
-                            q, cn.ac.oac.glimbrowser.logic.SearchEngine.GOOGLE,
-                        )
-                        val target = when (r.intent) {
-                            cn.ac.oac.glimbrowser.logic.AddressBarIntent.NAVIGATE -> r.normalizedUrl ?: r.value
-                            else -> r.value
-                        }
-                        if (target.isNotBlank()) {
-                            dispatch(BrowserController.Event.OpenUrlInNewTab(target))
+                        if (q.isNotBlank()) {
+                            dispatch(BrowserController.Event.AddressBarInput(q))
+                            dispatch(BrowserController.Event.SubmitAddressBar)
                             dispatch(BrowserController.Event.CloseSearch)
                         }
                     },
@@ -842,7 +821,7 @@ private fun ExpandedShell(
                 else -> BrowserScreen(
                     tab = state.currentTab,
                     shieldCount = state.adFilter.stats.currentPageCount,
-                    onAddressBarClick = { dispatch(BrowserController.Event.AddressBarFocus(true)) },
+                    onAddressBarClick = { dispatch(BrowserController.Event.OpenSearch) },
                     onShieldClick = { dispatch(BrowserController.Event.TogglePurifyReport(true)) },
                     onAiClick = { dispatch(BrowserController.Event.AiEntry) },
                     onBack = { navDispatch(BrowserController.Event.RequestBack) },

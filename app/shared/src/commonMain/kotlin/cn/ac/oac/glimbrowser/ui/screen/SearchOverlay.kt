@@ -143,12 +143,22 @@ fun SearchOverlay(
             color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
         )
-        Text(
-            "支持搜索联想与快捷搜索，敬请期待",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
+        Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                cn.ac.oac.glimbrowser.ui.design.GlimIconName.SPARKLE,
+                size = 11.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(5.dp))
+            Text(
+                "支持搜索联想与快捷搜索，敬请期待",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
+            )
+        }
 
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 14.dp),
@@ -167,7 +177,8 @@ fun SearchOverlay(
             GroupTitle("快捷站点")
             listOf("维基百科" to "https://zh.wikipedia.org", "GitHub" to "https://github.com").forEach { (name, url) ->
                 SuggestRow(
-                    icon = cn.ac.oac.glimbrowser.ui.design.GlimIconName.GLOBE,
+                    icon = null,
+                    letter = name.take(1),
                     title = name,
                     subtitle = url,
                     onClick = { onSubmit(url) },
@@ -190,7 +201,8 @@ private fun GroupTitle(text: String) {
 
 @Composable
 private fun SuggestRow(
-    icon: cn.ac.oac.glimbrowser.ui.design.GlimIconName,
+    icon: cn.ac.oac.glimbrowser.ui.design.GlimIconName?,
+    letter: String? = null,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
@@ -209,11 +221,21 @@ private fun SuggestRow(
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
             contentAlignment = Alignment.Center,
         ) {
-            cn.ac.oac.glimbrowser.ui.design.GlimIcon(
-                name = icon,
-                size = 17.dp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (letter != null) {
+                Text(
+                    letter.uppercase(),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (icon != null) {
+                cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                    name = icon,
+                    size = 17.dp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
