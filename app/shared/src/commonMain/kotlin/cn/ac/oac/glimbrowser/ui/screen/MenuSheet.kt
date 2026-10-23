@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import cn.ac.oac.glimbrowser.model.MenuItem
 import cn.ac.oac.glimbrowser.model.MenuItemIcon
 import cn.ac.oac.glimbrowser.ui.theme.GlimTokens
@@ -65,9 +66,12 @@ fun MenuSheet(
         Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = "菜单",
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                fontWeight = FontWeight.Normal,
+                fontSize = 20.sp,
+            ),
             color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Medium,
         )
         Spacer(modifier = Modifier.height(4.dp))
 

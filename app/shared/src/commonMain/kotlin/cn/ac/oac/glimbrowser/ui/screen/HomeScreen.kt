@@ -64,6 +64,8 @@ fun HomeScreen(
     /** AI 是否已配置（驱动入口卡片文案）。 */
     aiConfigured: Boolean = false,
     onAiCardClick: () -> Unit = {},
+    /** 搜索胶囊右侧的 ✦ 圆钮（原型 .s-ai）：直接进入 AI。 */
+    onAiClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -83,12 +85,15 @@ fun HomeScreen(
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                    fontSize = 68.sp,
+                    lineHeight = 68.sp,
+                    letterSpacing = (-0.5).sp,
                 ),
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
                 text = now.date,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(top = 2.dp),
             )
@@ -97,24 +102,36 @@ fun HomeScreen(
         // 搜索/地址输入框（原型 .searchbar 胶囊）
         Row(
             modifier = Modifier
-                .padding(start = 18.dp, end = 18.dp, top = 20.dp)
+                .padding(start = 20.dp, end = 20.dp, top = 24.dp)
                 .fillMaxWidth()
                 .clip(GlimTokens.RadiusPill)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = GlimTokens.GlassAlphaMedium))
-                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f), GlimTokens.RadiusPill)
+                .background(MaterialTheme.colorScheme.surface)
+                .border(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f), GlimTokens.RadiusPill)
                 .clickable(onClick = onSearchBarClick)
-                .padding(horizontal = 18.dp, vertical = 13.dp),
+                .padding(start = 18.dp, end = 10.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SearchGlyph(modifier = Modifier.size(14.dp))
+            SearchGlyph(modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "搜索或输入网址",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.outline,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+            // 原型 .s-ai：28dp 玉青圆钮
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(GlimTokens.RadiusPill)
+                    .background(MaterialTheme.colorScheme.primary)
+                    .clickable(onClick = onAiClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("✦", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary)
+            }
         }
 
         // 快捷站点 8 宫格（PRD §3.5.3；Phase 2 默认 6 + 添加 + 更多占位 = 8 格）
@@ -189,14 +206,14 @@ private fun QuickSiteCell(site: QuickSite, modifier: Modifier = Modifier, onClic
     ) {
         cn.ac.oac.glimbrowser.ui.design.FavTile(
             letter = site.letter,
-            size = 52,
+            size = 56,
             tint = MaterialTheme.colorScheme.primary,
         )
         Spacer(modifier = Modifier.height(7.dp))
         Text(
             text = site.label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp),
+            color = MaterialTheme.colorScheme.outline,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -214,20 +231,36 @@ private fun PrivacyMiniCard(todayBlocked: Int, series: List<Int>) {
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f), GlimTokens.RadiusCard)
             .padding(horizontal = 15.dp, vertical = 13.dp),
     ) {
-        Text(
-            text = "今日已拦截",
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
-            color = MaterialTheme.colorScheme.outline,
-        )
-        Text(
-            text = if (todayBlocked > 0) "$todayBlocked 项" else "暂无拦截",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(top = 2.dp),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).clip(GlimTokens.RadiusPill).background(MaterialTheme.colorScheme.primary))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "今日已拦截",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 4.dp)) {
+            Text(
+                text = if (todayBlocked > 0) "$todayBlocked" else "0",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
+                    fontSize = 32.sp,
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = if (todayBlocked > 0) "项" else "暂无拦截",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(bottom = 5.dp),
+            )
+        }
         // 迷你柱状图（原型 .bars：奇偶交替填充）
         Row(
-            modifier = Modifier.fillMaxWidth().height(26.dp).padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth().height(30.dp).padding(top = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(3.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
@@ -239,7 +272,7 @@ private fun PrivacyMiniCard(todayBlocked: Int, series: List<Int>) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height((26 * h).dp)
+                        .height((30 * h).dp)
                         .clip(RoundedCornerShape(2.dp))
                         .background(if (i % 2 == 0) JadeLight else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                 )
@@ -264,27 +297,27 @@ private fun AiMiniCard(configured: Boolean, onClick: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "✦ AI 助手",
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.4.sp),
-                color = MaterialTheme.colorScheme.outline,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = if (configured) "点 ✨ 摘要当前页，或与页面问答" else "点 ✨ 完成配置后即可摘要与问答",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = if (configured) "点 ✦ 摘要当前页，或与页面问答" else "点击 ✦ 完成配置后即可摘要与问答",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(top = 3.dp),
                 textAlign = TextAlign.Start,
             )
         }
-        // ✨ 主按钮（原型强调色唯一主要用例之一）
+        // ✦ 主按钮（原型 .ai-btn：42dp 玉青圆钮）
         Box(
             modifier = Modifier
-                .size(34.dp)
+                .size(42.dp)
                 .clip(GlimTokens.RadiusPill)
                 .background(MaterialTheme.colorScheme.primary)
-                .clickable { /* TODO Phase 5: 未配置 → 三步引导；已配置 → 摘要 */ },
+                .clickable(onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = "✦", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelLarge)
+            Text(text = "✦", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.titleMedium)
         }
     }
 }

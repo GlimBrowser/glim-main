@@ -35,9 +35,12 @@ object GlimTokens {
 
     // ===== V2.0 Safari-inspired 组件库令牌（毛玻璃 / 圆角阶梯 / 阴影）=====
     /** 圆角阶梯（组件库 --r-xs/sm/md/lg/xl）。 */
-    val RadiusXs = RoundedCornerShape(6.dp)
-    val RadiusCard = RoundedCornerShape(14.dp)
-    val RadiusPanel = RoundedCornerShape(20.dp)
+    val RadiusXs = RoundedCornerShape(8.dp)      // 原型 --r-xs
+    val Radius12 = RoundedCornerShape(12.dp)     // 原型 --r-sm
+    val Radius6 = RoundedCornerShape(6.dp)
+    val RadiusCard = RoundedCornerShape(16.dp)   // 原型 --r-md
+    val RadiusPanel = RoundedCornerShape(22.dp)  // 原型 --r-lg
+    val RadiusXl28 = RoundedCornerShape(28.dp)   // 原型 --r-xl（底部抽屉）
 
     /** 毛玻璃透明度（昼间：surface 72%/55%/40%）。 */
     const val GlassAlphaStrong = 0.72f

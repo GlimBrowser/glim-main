@@ -64,6 +64,10 @@ data class BrowserState(
     /** 强制深色网页（实验，页面无深色样式时反转）；持久化。 */
     val forceDarkWeb: Boolean = false,
 
+    /** 全屏搜索视图（原型 view-search；无"取消"文案，靠下拉/返回退出）。 */
+    val searchOpen: Boolean = false,
+    val searchQuery: String = "",
+
     /** AI 配置项（开关/超时/温度/语言等，持久化）。 */
     val aiPrefs: cn.ac.oac.glimbrowser.ai.AiPreferences = cn.ac.oac.glimbrowser.ai.AiPreferences(),
 
@@ -288,6 +292,15 @@ class BrowserActions(
             ),
             aiDrawerOpen = false,
         )
+
+    /** 打开搜索视图（清空上次输入）。 */
+    fun openSearch(state: BrowserState): BrowserState = state.copy(searchOpen = true, searchQuery = "")
+
+    /** 关闭搜索视图。 */
+    fun closeSearch(state: BrowserState): BrowserState = state.copy(searchOpen = false, searchQuery = "")
+
+    /** 搜索输入变化。 */
+    fun setSearchQuery(state: BrowserState, q: String): BrowserState = state.copy(searchQuery = q)
 
     /** AI 配置更新（持久化在 dispatch 后置副作用）。 */
     fun setAiPrefs(state: BrowserState, prefs: cn.ac.oac.glimbrowser.ai.AiPreferences): BrowserState =

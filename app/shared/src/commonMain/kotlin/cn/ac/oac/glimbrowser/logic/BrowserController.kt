@@ -341,6 +341,19 @@ class BrowserController(
             override fun reduce(actions: BrowserActions, state: BrowserState) = state
         }
 
+        /** 打开/关闭全屏搜索视图。 */
+        data object OpenSearch : Event {
+            override fun reduce(actions: BrowserActions, state: BrowserState) = actions.openSearch(state)
+        }
+
+        data object CloseSearch : Event {
+            override fun reduce(actions: BrowserActions, state: BrowserState) = actions.closeSearch(state)
+        }
+
+        data class SetSearchQuery(val q: String) : Event {
+            override fun reduce(actions: BrowserActions, state: BrowserState) = actions.setSearchQuery(state, q)
+        }
+
         /** AI 配置更新（开关/超时/温度/语言等）。 */
         data class SetAiPrefs(val prefs: cn.ac.oac.glimbrowser.ai.AiPreferences) : Event {
             override fun reduce(actions: BrowserActions, state: BrowserState) = actions.setAiPrefs(state, prefs)

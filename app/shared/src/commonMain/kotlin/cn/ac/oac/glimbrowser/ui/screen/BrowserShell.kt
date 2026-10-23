@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cn.ac.oac.glimbrowser.logic.BrowserController
@@ -138,6 +139,7 @@ private fun CompactShell(
     PlatformBackHandler(enabled = true) {
         val tab = state.tabs.currentTab
         when {
+            state.searchOpen -> dispatch(BrowserController.Event.CloseSearch)
             state.subPage != null -> dispatch(BrowserController.Event.CloseSubPage)
             state.findOpen -> dispatch(BrowserController.Event.CloseFind)
             state.menuOpen -> dispatch(BrowserController.Event.ToggleMenu(false))
@@ -169,11 +171,33 @@ private fun CompactShell(
                     onClearClosed = { dispatch(BrowserController.Event.ClearClosedTabs) },
                     modifier = Modifier.fillMaxSize(),
                 )
+                state.searchOpen -> SearchOverlay(
+                    query = state.searchQuery,
+                    onQueryChange = { dispatch(BrowserController.Event.SetSearchQuery(it)) },
+                    onSubmit = { q ->
+                        val r = cn.ac.oac.glimbrowser.logic.resolveAddressBarInput(
+                            q, cn.ac.oac.glimbrowser.logic.SearchEngine.GOOGLE,
+                        )
+                        val target = when (r.intent) {
+                            cn.ac.oac.glimbrowser.logic.AddressBarIntent.NAVIGATE -> r.normalizedUrl ?: r.value
+                            else -> r.value
+                        }
+                        if (target.isNotBlank()) {
+                            dispatch(BrowserController.Event.OpenUrlInNewTab(target))
+                            dispatch(BrowserController.Event.CloseSearch)
+                        }
+                    },
+                    onClose = { dispatch(BrowserController.Event.CloseSearch) },
+                    repository = panelRepository,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 onHome -> HomeScreen(
                     now = now,
                     enabledCardIds = state.enabledHomeCards,
-                    onSearchBarClick = { dispatch(BrowserController.Event.AddressBarFocus(true)) },
+                    onSearchBarClick = { dispatch(BrowserController.Event.OpenSearch) },
                     onQuickSiteClick = { site -> dispatch(BrowserController.Event.OpenUrlInNewTab(site.url)) },
+                    onAiCardClick = { dispatch(BrowserController.Event.AiEntry) },
+                    onAiClick = { dispatch(BrowserController.Event.AiEntry) },
                     modifier = Modifier.fillMaxSize(),
                 )
                 else -> BrowserScreen(
@@ -307,16 +331,6 @@ private fun CompactShell(
             }
         }
 
-        // 浮动标签条（Safari 风格；手机仅当前标签，桌面/Pad 全量）
-        cn.ac.oac.glimbrowser.ui.design.FloatingTabStrip(
-            tabs = state.tabs.tabs,
-            currentTabId = state.tabs.currentTabId,
-            onSelect = { dispatch(BrowserController.Event.SelectTab(it)) },
-            onClose = { dispatch(BrowserController.Event.CloseTab(it)) },
-            onNewTab = { dispatch(BrowserController.Event.NewTab) },
-            compact = true,
-        )
-
         // 页内查找条（真实命中数）
         if (state.findOpen) {
             cn.ac.oac.glimbrowser.ui.screen.FindInPageBar(
@@ -375,6 +389,18 @@ private fun CompactShell(
             onClose = { dispatch(BrowserController.Event.ToggleAiDrawer(false)) },
         )
 
+        // 底部标签条（原型 V3.1：位于内容与底部导航之间）
+        if (!state.searchOpen && !onHome) {
+            cn.ac.oac.glimbrowser.ui.design.FloatingTabStrip(
+                tabs = state.tabs.tabs,
+                currentTabId = state.tabs.currentTabId,
+                onSelect = { dispatch(BrowserController.Event.SelectTab(it)) },
+                onClose = { dispatch(BrowserController.Event.CloseTab(it)) },
+                onNewTab = { dispatch(BrowserController.Event.NewTab) },
+                compact = true,
+            )
+        }
+
         // 底部导航（原型 .tabbar：首页/标签/菜单，选中玉青）
         BottomNavBar(
             current = state.navDestination,
@@ -387,52 +413,121 @@ private fun CompactShell(
 /** 底部导航栏（PRD §6.1 首页/标签/菜单 三入口；原型 .tabbar）。 */
 @Composable
 private fun BottomNavBar(current: NavDestination, tabCount: Int, onSelect: (NavDestination) -> Unit) {
-    // 沉浸式玻璃底栏：半透明底 + 顶部渐变晕 + 细分割线（内容可从下方透出）
-    androidx.compose.foundation.layout.Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.10f)),
-    ) {
-        // 真实模糊背景（Android PixelCopy / 桌面 Robot；iOS 暂为底色，见 115）
+    // 原型 V3.1 .bottom-nav：毛玻璃底 + 三入口（图标 + 文字）+ Home Indicator
+    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxWidth()) {
         cn.ac.oac.glimbrowser.ui.design.PlatformBlurBackdrop(
             modifier = Modifier.matchParentSize(),
             radius = 22.dp,
-            tintAlpha = 0.35f,
+            tintAlpha = 0.30f,
         )
         androidx.compose.foundation.layout.Box(
             modifier = Modifier.matchParentSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.42f)),
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)),
         )
         androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(18.dp)
-                .background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(Color.Transparent, MaterialTheme.colorScheme.surface.copy(alpha = 0.35f)),
-                    ),
-                ),
+            modifier = Modifier.fillMaxWidth().height(1.dp)
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.10f)),
         )
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            NavBarItem("⌂", "首页", active = current == NavDestination.HOME) { onSelect(NavDestination.HOME) }
-            NavBarItem("▦", if (tabCount > 0) "标签 $tabCount" else "标签", active = current == NavDestination.TABS) { onSelect(NavDestination.TABS) }
-            NavBarItem("⋯", "菜单", active = current == NavDestination.MENU) { onSelect(NavDestination.MENU) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                NavBarItem("home", "首页", active = current == NavDestination.HOME) { onSelect(NavDestination.HOME) }
+                NavBarItem("tabs", if (tabCount > 1) "标签 $tabCount" else "标签", active = current == NavDestination.TABS) { onSelect(NavDestination.TABS) }
+                NavBarItem("menu", "菜单", active = current == NavDestination.MENU) { onSelect(NavDestination.MENU) }
+            }
+            Spacer(Modifier.height(6.dp))
+            // Home Indicator（原型 .home-indicator）
+            Box(
+                modifier = Modifier
+                    .width(134.dp)
+                    .height(5.dp)
+                    .clip(GlimTokens.RadiusPill)
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)),
+            )
         }
     }
 }
 
 @Composable
-private fun NavBarItem(glyph: String, label: String, active: Boolean, onClick: () -> Unit) {
+private fun NavBarItem(kind: String, label: String, active: Boolean, onClick: () -> Unit) {
     val color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     Column(
-        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(horizontal = 18.dp, vertical = 4.dp),
+        modifier = Modifier
+            .clip(GlimTokens.Radius12)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = glyph, style = MaterialTheme.typography.titleMedium, color = color)
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = color)
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clip(GlimTokens.RadiusXs)
+                .background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent),
+            contentAlignment = Alignment.Center,
+        ) {
+            NavIcon(kind, color)
+        }
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.5.sp),
+            color = color,
+            fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
+        )
+    }
+}
+
+/** 线性图标（纯 Canvas，避免引入图标库）。 */
+@Composable
+private fun NavIcon(kind: String, color: Color) {
+    androidx.compose.foundation.Canvas(modifier = Modifier.size(22.dp)) {
+        val w = size.width
+        val h = size.height
+        val sw = 1.8.dp.toPx()
+        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(
+            width = sw,
+            cap = androidx.compose.ui.graphics.StrokeCap.Round,
+            join = androidx.compose.ui.graphics.StrokeJoin.Round,
+        )
+        when (kind) {
+            "home" -> {
+                val p = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(w * 0.16f, h * 0.46f)
+                    lineTo(w * 0.5f, h * 0.16f)
+                    lineTo(w * 0.84f, h * 0.46f)
+                    lineTo(w * 0.84f, h * 0.84f)
+                    lineTo(w * 0.60f, h * 0.84f)
+                    lineTo(w * 0.60f, h * 0.60f)
+                    lineTo(w * 0.40f, h * 0.60f)
+                    lineTo(w * 0.40f, h * 0.84f)
+                    lineTo(w * 0.16f, h * 0.84f)
+                    close()
+                }
+                drawPath(p, color, style = stroke)
+            }
+            "tabs" -> {
+                drawRoundRect(
+                    color = color,
+                    topLeft = androidx.compose.ui.geometry.Offset(w * 0.10f, h * 0.28f),
+                    size = androidx.compose.ui.geometry.Size(w * 0.80f, h * 0.58f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
+                    style = stroke,
+                )
+                drawLine(color, androidx.compose.ui.geometry.Offset(w * 0.30f, h * 0.28f), androidx.compose.ui.geometry.Offset(w * 0.30f, h * 0.16f), sw)
+                drawLine(color, androidx.compose.ui.geometry.Offset(w * 0.30f, h * 0.16f), androidx.compose.ui.geometry.Offset(w * 0.70f, h * 0.16f), sw)
+                drawLine(color, androidx.compose.ui.geometry.Offset(w * 0.70f, h * 0.16f), androidx.compose.ui.geometry.Offset(w * 0.70f, h * 0.28f), sw)
+            }
+            else -> {
+                listOf(0.24f, 0.5f, 0.76f).forEach { x ->
+                    drawCircle(color, radius = 1.6.dp.toPx(), center = androidx.compose.ui.geometry.Offset(w * x, h * 0.5f))
+                }
+            }
+        }
     }
 }
 
@@ -483,13 +578,6 @@ private fun AddressBarEditorOverlay(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clip(GlimTokens.RadiusPill).clickable(onClick = onSubmit).padding(horizontal = 10.dp, vertical = 8.dp),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "取消",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.clip(GlimTokens.RadiusPill).clickable(onClick = onCancel).padding(horizontal = 10.dp, vertical = 8.dp),
             )
         }
         Spacer(modifier = Modifier.height(10.dp))
@@ -566,6 +654,7 @@ private fun ExpandedShell(
     PlatformBackHandler(enabled = true) {
         val tab = state.tabs.currentTab
         when {
+            state.searchOpen -> dispatch(BrowserController.Event.CloseSearch)
             state.subPage != null -> dispatch(BrowserController.Event.CloseSubPage)
             state.findOpen -> dispatch(BrowserController.Event.CloseFind)
             state.menuOpen -> dispatch(BrowserController.Event.ToggleMenu(false))
@@ -685,11 +774,33 @@ private fun ExpandedShell(
         // 内容区
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             when {
+                state.searchOpen -> SearchOverlay(
+                    query = state.searchQuery,
+                    onQueryChange = { dispatch(BrowserController.Event.SetSearchQuery(it)) },
+                    onSubmit = { q ->
+                        val r = cn.ac.oac.glimbrowser.logic.resolveAddressBarInput(
+                            q, cn.ac.oac.glimbrowser.logic.SearchEngine.GOOGLE,
+                        )
+                        val target = when (r.intent) {
+                            cn.ac.oac.glimbrowser.logic.AddressBarIntent.NAVIGATE -> r.normalizedUrl ?: r.value
+                            else -> r.value
+                        }
+                        if (target.isNotBlank()) {
+                            dispatch(BrowserController.Event.OpenUrlInNewTab(target))
+                            dispatch(BrowserController.Event.CloseSearch)
+                        }
+                    },
+                    onClose = { dispatch(BrowserController.Event.CloseSearch) },
+                    repository = panelRepository,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 onHome -> HomeScreen(
                     now = now,
                     enabledCardIds = state.enabledHomeCards,
-                    onSearchBarClick = { dispatch(BrowserController.Event.AddressBarFocus(true)) },
+                    onSearchBarClick = { dispatch(BrowserController.Event.OpenSearch) },
                     onQuickSiteClick = { site -> dispatch(BrowserController.Event.OpenUrlInNewTab(site.url)) },
+                    onAiCardClick = { dispatch(BrowserController.Event.AiEntry) },
+                    onAiClick = { dispatch(BrowserController.Event.AiEntry) },
                     modifier = Modifier.fillMaxSize(),
                 )
                 else -> BrowserScreen(

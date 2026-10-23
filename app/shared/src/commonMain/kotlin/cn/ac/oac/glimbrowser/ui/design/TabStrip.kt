@@ -47,7 +47,7 @@ fun FloatingTabStrip(
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp)
             .clip(GlimTokens.RadiusSm)
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f))
+            .background(MaterialTheme.colorScheme.surface)
             .horizontalScroll(rememberScrollState())
             .padding(horizontal = 4.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -57,15 +57,15 @@ fun FloatingTabStrip(
             val active = tab.id == currentTabId
             Row(
                 modifier = Modifier
-                    .height(30.dp)
-                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                    .background(if (active) MaterialTheme.colorScheme.surface else Color.Transparent)
+                    .height(40.dp)
+                    .clip(GlimTokens.Radius12)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { onSelect(tab.id) }
                     .padding(start = 9.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    modifier = Modifier.size(12.dp).clip(RoundedCornerShape(3.dp))
+                    modifier = Modifier.size(14.dp).clip(RoundedCornerShape(3.dp))
                         .background(if (tab.isPrivate) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
                 )
                 Spacer(Modifier.width(6.dp))
@@ -80,8 +80,8 @@ fun FloatingTabStrip(
                 if (!compact || active) {
                     Spacer(Modifier.width(4.dp))
                     Box(
-                        modifier = Modifier.size(16.dp).clip(GlimTokens.RadiusPill)
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                        modifier = Modifier.size(20.dp).clip(GlimTokens.RadiusPill)
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
                             .clickable { onClose(tab.id) },
                         contentAlignment = Alignment.Center,
                     ) { Text("×", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline) }
@@ -89,7 +89,9 @@ fun FloatingTabStrip(
             }
         }
         Box(
-            modifier = Modifier.size(28.dp).clip(GlimTokens.RadiusSm).clickable(onClick = onNewTab),
+            modifier = Modifier.size(40.dp).clip(GlimTokens.Radius12)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(onClick = onNewTab),
             contentAlignment = Alignment.Center,
         ) { Text("＋", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
     }
