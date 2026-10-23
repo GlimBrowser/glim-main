@@ -29,6 +29,7 @@ DO_SUBS=1
 ALLOW_DIRTY=0
 CHECK_ONLY=0
 SKIP_MISSING=1
+PREFLIGHT=1
 
 usage() { sed -n '2,20p' "$0"; exit 0; }
 
@@ -40,6 +41,7 @@ while [[ $# -gt 0 ]]; do
     --allow-dirty) ALLOW_DIRTY=1; shift ;;
     --check-only) CHECK_ONLY=1; shift ;;
     --no-skip-missing) SKIP_MISSING=0; shift ;;
+    --no-preflight) PREFLIGHT=0; shift ;;
     -m|--message) COMMIT_MSG="${2:-}"; shift 2 ;;
     -h|--help) usage ;;
     *) echo "未知参数：$1（--help 查看用法）"; exit 1 ;;
@@ -82,7 +84,7 @@ fi
 # --- 2. 子仓库存在性预检（ls-remote，不需要 gh）---
 MISSING_PATHS=()
 EXISTING_PATHS=()
-if [[ "$DO_SUBS" == "1" && "$DRY" != "1" ]]; then
+if [[ "$DO_SUBS" == "1" && "$DRY" != "1" && "$PREFLIGHT" == "1" ]]; then
   echo "== 预检子仓库是否存在（https）..."
   fail_count=0
   total=0
@@ -104,7 +106,11 @@ if [[ "$DO_SUBS" == "1" && "$DRY" != "1" ]]; then
       echo "   - https://github.com/$ORG/${repo:-$p}"
     done
     if [[ "$fail_count" == "$total" ]]; then
-      echo "   全部失败：通常是仓库还没创建，或本机没有该组织的访问凭证。"
+      echo "   全部失败，可能原因："
+      echo "     a) 组织下还没创建这些仓库 → 运行 ./scripts/create-repos.sh"
+      echo "     b) 本机无网络 / 没有该组织的访问凭证（PAT 或 SSH key）"
+      echo "   可先用浏览器打开 https://github.com/orgs/$ORG/repositories 确认。"
+      echo "   网络或凭证暂时不可用时，可加 --no-preflight 直接推送。"
     fi
     echo "   创建：./scripts/create-repos.sh        （或手动在 https://github.com/orgs/$ORG/repositories/new 新建）"
     if [[ "$SKIP_MISSING" == "1" ]]; then
