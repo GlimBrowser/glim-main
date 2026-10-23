@@ -11,7 +11,12 @@
 #   ./scripts/push-all.sh --preflight            # 先探测子仓库可访问性（私有仓库需凭证，否则只提示"无法确认"）
 #   ./scripts/push-all.sh --skip-missing         # 跳过探测失败的子仓库（默认不跳过）
 #
+# 默认使用 gh CLI 取凭证（无需手动配 SSH key / PAT）：
+#   gh auth login                     # 一次登录
+#   ./scripts/push-all.sh             # 自动 gh auth token + HTTPS 推送
+#
 # 环境变量：
+#   USE_GH        1=用 gh 取 token（默认 auto：装了 gh 且已登录就用）
 #   SPLIT_ORG     组织名（默认 GlimBrowser）
 #   GIT_REMOTE   主仓库远端名（默认 origin）
 #   GIT_BRANCH   主分支名（默认当前分支）
@@ -30,6 +35,8 @@ DO_MAIN=1
 DO_SUBS=1
 ALLOW_DIRTY=0
 CHECK_ONLY=0
+USE_GH=auto
+CREATE_MISSING=0
 SKIP_MISSING=0
 PREFLIGHT=0
 
@@ -42,6 +49,9 @@ while [[ $# -gt 0 ]]; do
     --subs-only) DO_MAIN=0; shift ;;
     --allow-dirty) ALLOW_DIRTY=1; shift ;;
     --check-only) CHECK_ONLY=1; shift ;;
+    --gh) USE_GH=1; shift ;;
+    --no-gh) USE_GH=0; shift ;;
+    --create-missing) CREATE_MISSING=1; shift ;;
     --no-skip-missing) SKIP_MISSING=0; shift ;;
     --preflight) PREFLIGHT=1; shift ;;
     --no-preflight) PREFLIGHT=0; shift ;;
@@ -55,6 +65,52 @@ cd "$ROOT"
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "不是 git 仓库"; exit 1; }
 [[ -n "$BRANCH" ]] || BRANCH="$(git branch --show-current)"
 [[ -n "$BRANCH" ]] || { echo "无法确定当前分支（detached HEAD？）"; exit 1; }
+
+# --- gh 集成：自动取 token，统一走 HTTPS ---
+if [[ "$USE_GH" == "auto" ]]; then
+  if command -v gh >/dev/null 2>&1; then USE_GH=1; else USE_GH=0; fi
+fi
+
+if [[ "$USE_GH" == "1" ]]; then
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "!! 指定了 --gh 但未安装 gh CLI：https://cli.github.com/"
+    exit 1
+  fi
+  if [[ "$DRY" != "1" ]]; then
+    if ! gh auth status >/dev/null 2>&1; then
+      echo "!! gh 未登录。先执行：gh auth login"
+      exit 1
+    fi
+    TOKEN="$(gh auth token 2>/dev/null || true)"
+    if [[ -z "$TOKEN" ]]; then
+      echo "!! 无法从 gh 获取 token（gh auth token 失败）"
+      exit 1
+    fi
+    SPLIT_TOKEN="$TOKEN"
+    export SPLIT_TOKEN
+  fi
+  SPLIT_REMOTE_BASE="${SPLIT_REMOTE_BASE:-https://github.com/$ORG}"
+  echo "== 使用 gh（HTTPS）推送；远端前缀：$SPLIT_REMOTE_BASE"
+  echo
+fi
+
+# 主仓库名：优先从 origin 推导，否则用目录名
+repo_name="$(basename "$(git remote get-url "$REMOTE" 2>/dev/null || echo "$ROOT")" .git)"
+[[ -n "$repo_name" && "$repo_name" != "." ]] || repo_name="$(basename "$ROOT")"
+
+# 用 gh 创建缺失的子仓库（可选）
+if [[ "$CREATE_MISSING" == "1" && "$USE_GH" == "1" ]]; then
+  echo "== 用 gh 创建缺失的子仓库"
+  while IFS='|' read -r path repo desc; do
+    [[ -z "${path// }" || "${path:0:1}" == "#" ]] && continue
+    if gh repo view "$ORG/$repo" >/dev/null 2>&1; then
+      echo "   已存在：$ORG/$repo"
+    else
+      run gh repo create "$ORG/$repo" --public --description "$desc"
+    fi
+  done < "$CONF"
+  echo
+fi
 
 # 子仓库远端：优先 PAT（HTTPS），否则 SSH。
 remote_url() {
@@ -158,6 +214,17 @@ fi
 # --- 3. 主仓库 ---
 if [[ "$DO_MAIN" == "1" ]]; then
   echo "== 推送主仓库（完整项目）→ $REMOTE/$BRANCH"
+  if [[ "$USE_GH" == "1" ]]; then
+    if [[ "$DRY" == "1" ]]; then
+      echo "  [dry-run] gh repo view $ORG/$repo_name || gh repo create $ORG/$repo_name --public --source=. --remote=$REMOTE --push"
+    elif gh repo view "$ORG/$repo_name" >/dev/null 2>&1; then
+      echo "   仓库已存在：https://github.com/$ORG/$repo_name"
+    else
+      echo "   仓库不存在，用 gh 创建并推送…"
+      gh repo create "$ORG/$repo_name" --public --source=. --remote="$REMOTE" --push
+      echo "   已创建并推送：https://github.com/$ORG/$repo_name"
+    fi
+  fi
   run git push -u "$REMOTE" "$BRANCH"
   echo "   $([ "$DRY" = 1 ] && echo '（dry-run）' || echo '完成')"
   echo
@@ -181,9 +248,6 @@ if [[ "$DO_SUBS" == "1" ]]; then
   fi
   echo
 fi
-
-repo_name="$(basename "$(git remote get-url "$REMOTE" 2>/dev/null || echo "$ROOT")" .git)"
-[[ -n "$repo_name" && "$repo_name" != "." ]] || repo_name="$(basename "$ROOT")"
 
 echo "== 全部完成"
 echo "   主仓库：https://github.com/$ORG/$repo_name"
