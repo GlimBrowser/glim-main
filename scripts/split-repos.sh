@@ -95,16 +95,19 @@ split_one() {
   git branch -D "$branch" >/dev/null 2>&1 || true
 
   if [[ "$MODE" == "push" ]]; then
-    git subtree split --prefix="$path" -b "$branch" >/dev/null
-    attach_license "$branch"
     if [[ "$DRY_RUN" == "1" ]]; then
+      echo "   [dry-run] git subtree split --prefix=$path -b $branch"
       echo "   [dry-run] git push --force $remote $branch:main"
-    else
+      return 0
+    fi
+    git subtree split --prefix="$path" -b "$branch" >/dev/null 2>&1
+    attach_license "$branch"
+    if false; then
       echo "   推送到 $remote"
       git push --force "$remote" "$branch:main"
     fi
   else
-    git subtree split --prefix="$path" -b "$branch" >/dev/null
+    git subtree split --prefix="$path" -b "$branch" >/dev/null 2>&1
     attach_license "$branch"
     echo "   已创建本地分支 ${branch}（$(git rev-parse --short "${branch}")）"
   fi
