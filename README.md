@@ -196,19 +196,20 @@ iOS：用 Xcode 打开 `app/iosApp`，选择模拟器或真机运行。
 
 ## 发布（可选）
 
-主仓库包含完整项目，**不内嵌子仓库代码**。需要单独发布某个模块时，用拆分脚本生成独立仓库（只读镜像）：
+日常开发只需要 `git push`。需要把子目录单独发布成独立仓库时，用 `gh` + 拆分脚本：
 
 ```bash
+gh auth login                          # 一次登录（脚本会自动 gh auth token，走 HTTPS）
 ./scripts/create-repos.sh --dry-run    # 预演：组织下会创建哪些仓库
-./scripts/create-repos.sh              # 创建空仓库（需 gh 登录 + 组织权限）
+./scripts/create-repos.sh              # 用 gh 在组织下创建空仓库
 ./scripts/push-all.sh -m "feat: ..."   # 提交 + 推主仓库 + 拆分推送子仓库
 ./scripts/push-all.sh --main-only      # 只推主仓库
 ./scripts/push-all.sh --subs-only      # 只推子仓库
 ./scripts/push-all.sh --dry-run        # 只看会执行什么
 ```
 
-私有仓库请设置 `SPLIT_TOKEN`（有 `repo` 权限的 PAT），脚本会自动走 HTTPS；否则默认用 SSH。
-拆分原理、凭证与 CI（`.github/workflows/split-repos.yml`）见 [SUBREPOS.md](SUBREPOS.md)。
+脚本默认走 **gh（HTTPS + token）**，不需要配 SSH key；也可以用 `--no-gh` 退回 SSH/PAT 方式。
+主仓库不内嵌子仓库代码，也不在 README 展示子仓库链接。拆分原理与 CI 见 [SUBREPOS.md](SUBREPOS.md)。
 
 ## 发布前检查清单
 

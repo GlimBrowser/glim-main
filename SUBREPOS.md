@@ -42,16 +42,19 @@
 
 脚本执行 `git subtree split --prefix=<子目录> -b split/<仓库名>`，在本地生成 `split/<仓库名>` 分支，包含该子目录的完整历史（路径已重写为仓库根）。
 
-## 三、一键发布（推荐）
+## 三、一键发布（推荐，gh 优先）
 
 ```bash
+gh auth login                            # 一次登录；脚本会自动取 token
+./scripts/create-repos.sh                # 用 gh 在组织下建空仓库
 ./scripts/push-all.sh --dry-run          # 预览
 ./scripts/push-all.sh -m "feat: xxx"     # 提交 + 推主仓库 + 推全部子仓库
 ./scripts/push-all.sh --main-only        # 只推主仓库（完整项目）
 ./scripts/push-all.sh --subs-only        # 只推子仓库
 ```
 
-脚本会先做：工作区检查 → 子仓库存在性预检（`git ls-remote`）→ 推主仓库 → 逐个 `subtree split` 并推送。
+脚本会先做：工作区检查 →（可选）子仓库预检 → 推主仓库 → 逐个 `subtree split` 并推送。
+默认使用 `gh auth token` 走 HTTPS（`https://x-access-token:...`），无需 SSH key；`--no-gh` 可退回 SSH。
 
 ## 四、创建子仓库并推送
 
