@@ -7,7 +7,7 @@ Copyright (c) 2026 GlimBrowser Authors
    许可：GlimBrowser Non-Commercial License 1.0（见 LICENSE）
    允许：个人学习、教学、研究、非营利使用
    禁止：任何商业使用（销售、付费服务、SaaS、营利实体内部生产使用等）
-   商业授权联系：<填写你的商务联系邮箱>
+   商业授权联系：https://github.com/GlimBrowser（提交 Commercial License 议题）
 
 2. 第三方依赖（均为宽松许可证，随依赖分发时请保留其声明）
    - Kotlin / kotlinx（coroutines、serialization、datetime）：Apache-2.0

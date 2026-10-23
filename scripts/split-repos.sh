@@ -5,8 +5,8 @@
 #   ./scripts/split-repos.sh --list                 列出清单
 #   ./scripts/split-repos.sh --branch               仅创建本地拆分分支 split/<repo>
 #   ./scripts/split-repos.sh --branch --only shared/network
-#   SPLIT_ORG=your-org ./scripts/split-repos.sh --push       拆分并推送
-#   SPLIT_ORG=your-org SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push   只看命令
+#   SPLIT_ORG=GlimBrowser ./scripts/split-repos.sh --push     拆分并推送
+#   SPLIT_ORG=GlimBrowser SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push  只看命令
 #
 # 说明：
 #   - 拆分出来的仓库只含该子目录内容，**不含根目录的 Gradle 文件**；
@@ -17,7 +17,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONF="$ROOT/scripts/repos.conf"
-ORG="${SPLIT_ORG:-<your-org>}"
+ORG="${SPLIT_ORG:-GlimBrowser}"
 DRY_RUN="${SPLIT_DRY_RUN:-0}"
 MODE="branch"
 ONLY=""

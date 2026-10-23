@@ -1,8 +1,9 @@
 name: Split sub-repositories
 
 # 把 monorepo 的子目录拆分为独立仓库并推送。
-# 需要 Secrets: SPLIT_TOKEN（有 repo 权限的 PAT）
-#      Variables: SPLIT_ORG（GitHub 组织或用户名）
+# 仓库位于 GitHub 组织 GlimBrowser（https://github.com/GlimBrowser）
+# 需要 Secrets: SPLIT_TOKEN（有 repo 权限的 PAT，需可推送到该组织下的子仓库）
+#      Variables: SPLIT_ORG（可选，默认 GlimBrowser）
 on:
   push:
     branches: [ main ]
@@ -31,7 +32,7 @@ jobs:
       - name: 逐个拆分并推送
         env:
           TOKEN: ${{ secrets.SPLIT_TOKEN }}
-          ORG: ${{ vars.SPLIT_ORG }}
+          ORG: ${{ vars.SPLIT_ORG || 'GlimBrowser' }}
         run: |
           set -euo pipefail
           git config user.name  "glimbrowser-bot"

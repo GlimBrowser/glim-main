@@ -1,5 +1,7 @@
 # GlimBrowser · 清舟浏览器
 
+> 仓库组织：**https://github.com/GlimBrowser** ｜ 主仓库：**https://github.com/GlimBrowser/GlimBrowser**
+
 > 一个用 Kotlin Multiplatform + Compose Multiplatform 写成的多页浏览器。手机、平板、桌面共用一套内核抽象与界面组件，网页渲染交给各平台原生引擎（Android WebView / iOS WKWebView / 桌面与 Web 走 JVM 与浏览器）。
 
 <p>
@@ -98,6 +100,13 @@
 
 ## 快速开始
 
+### 获取代码
+
+```bash
+git clone https://github.com/GlimBrowser/GlimBrowser.git
+cd GlimBrowser
+```
+
 ### 环境
 
 - JDK 17
@@ -181,7 +190,7 @@ iOS：用 Xcode 打开 `app/iosApp`，选择模拟器或真机运行。
 
 - ✅ 允许：个人学习、研究、教学、非营利组织内部使用；复制、修改、分发（保留声明）
 - ❌ 禁止：任何**商业使用**——销售、付费服务、SaaS/托管、营利实体内部生产使用、以本项目功能为价值来源向第三方收费
-- 💼 商业授权：请联系 **`<填写你的商务联系邮箱>`**（见 [NOTICE](NOTICE)）
+- 💼 商业授权：请通过 GitHub 组织 **https://github.com/GlimBrowser** 联系维护者（或提交 Commercial License 议题），见 [NOTICE](NOTICE)
 
 这不是 OSI 认可的开源许可证，而是 **source-available（源码可用）**。若你需要真正的开源许可证（如 Apache-2.0 / MIT），可以自行替换 `LICENSE`，但这与"限制商业使用"的目标冲突，请先想清楚。
 
@@ -197,7 +206,7 @@ iOS：用 Xcode 打开 `app/iosApp`，选择模拟器或真机运行。
 ./scripts/split-repos.sh --branch
 
 # 拆分并推送到各自的远端（org 需替换）
-SPLIT_ORG=your-org ./scripts/split-repos.sh --push
+SPLIT_ORG=GlimBrowser ./scripts/split-repos.sh --push
 ```
 
 细节、远端初始化与 CI（`.github/workflows/split-repos.yml`）见 [SUBREPOS.md](SUBREPOS.md)。
@@ -208,10 +217,10 @@ SPLIT_ORG=your-org ./scripts/split-repos.sh --push
 
 | 文件 | 占位符 | 替换为 |
 |---|---|---|
-| `README.md`、`NOTICE`、`LICENSE` | `<填写你的商务联系邮箱>` | 你的商业授权联系邮箱 |
-| `README.md` | `https://github.com/<填写你的 GitHub 组织或用户名>/GlimBrowser` | 仓库真实地址 |
+| `README.md`、`NOTICE`、`LICENSE` | 商业授权联系方式 | 目前指向 GitHub 组织主页；如需邮箱请补充 |
+| — | 组织地址 | 已设为 `https://github.com/GlimBrowser` |
 | `.github/workflows/split-repos.yml` | `vars.SPLIT_ORG` / `secrets.SPLIT_TOKEN` | 组织名与 PAT |
-| `scripts/split-repos.sh` | `SPLIT_ORG` 默认值 `<your-org>` | 你的组织名 |
+| `scripts/split-repos.sh` | `SPLIT_ORG` 默认值 | 已设为 `GlimBrowser` |
 
 另外确认：
 

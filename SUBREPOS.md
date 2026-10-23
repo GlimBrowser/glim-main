@@ -1,5 +1,9 @@
 # 子仓库拆分说明
 
+> GitHub 组织：https://github.com/GlimBrowser ｜ 主仓库：https://github.com/GlimBrowser/GlimBrowser
+>
+> 子仓库默认创建在该组织下，例如 `https://github.com/GlimBrowser/glim-network`。
+
 本仓库（`GlimBrowser`）是**唯一真源（source of truth）**。有些模块（协议层、规则引擎、组件库）适合单独发布、单独引用，所以提供按子目录拆分成独立仓库的能力。
 
 ## 一、可拆分的子目录
@@ -38,16 +42,31 @@
 
 脚本执行 `git subtree split --prefix=<子目录> -b split/<仓库名>`，在本地生成 `split/<仓库名>` 分支，包含该子目录的完整历史（路径已重写为仓库根）。
 
-## 三、推送到远端
+## 三、创建子仓库并推送
 
-1. 在 GitHub（或其它托管）先**创建空仓库**，例如 `glim-network`；
+### 3.1 在组织下创建空仓库
+
+用 gh CLI 一次创建全部（需要组织建仓权限）：
+
+```bash
+./scripts/create-repos.sh --dry-run     # 先看清要建哪些
+./scripts/create-repos.sh               # 实际创建（public）
+./scripts/create-repos.sh --private     # 或者建为私有
+./scripts/create-repos.sh --only glim-network
+```
+
+也可以手动在 https://github.com/orgs/GlimBrowser/repositories/new 创建，名字与 [`scripts/repos.conf`](scripts/repos.conf) 中一致。
+
+### 3.2 推送
+
+1. 目标仓库已存在（上一步）；
 2. 配置 SSH key 或 PAT；
 3. 设置组织名后推送：
 
 ```bash
-SPLIT_ORG=your-org ./scripts/split-repos.sh --push
+SPLIT_ORG=GlimBrowser ./scripts/split-repos.sh --push
 # 只看命令不真推：
-SPLIT_ORG=your-org SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push
+SPLIT_ORG=GlimBrowser SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push
 ```
 
 推送使用 `--force`，因为每次 `subtree split` 都会重写历史（子仓库不要直接提交，否则会被覆盖）。
@@ -63,7 +82,7 @@ SPLIT_ORG=your-org SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push
 | `SPLIT_TOKEN` | 有 `repo` 权限的 PAT（用于推送到各子仓库） |
 | `SPLIT_ORG`（变量） | 你的 GitHub 组织或用户名 |
 
-> 若使用 SSH，可改成 deploy key；工作流里默认用 `https://x-access-token:$SPLIT_TOKEN@github.com/<org>/<repo>.git`。
+> 若使用 SSH，可改成 deploy key；工作流里默认用 `https://x-access-token:$SPLIT_TOKEN@github.com/GlimBrowser/<repo>.git`。
 
 ## 五、作为依赖引用
 
@@ -71,7 +90,7 @@ SPLIT_ORG=your-org SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push
 
 ```bash
 # 引用某个子仓库
-git submodule add https://github.com/your-org/glim-adfilter.git libs/glim-adfilter
+git submodule add https://github.com/GlimBrowser/glim-adfilter.git libs/glim-adfilter
 ```
 
 但要注意：**子仓库不含根目录的 Gradle 配置**（`settings.gradle.kts`、`gradle/libs.versions.toml`、`build.gradle.kts`）。因此：
