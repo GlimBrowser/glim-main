@@ -234,8 +234,14 @@ private fun CompactShell(
                             onScroll = { y ->
                                 val dy = y - lastScrollY
                                 lastScrollY = y
-                                if (dy > 10 && y > 64) barVisible = false
-                                if (dy < -6) barVisible = true
+                                if (dy > 10 && y > 64) {
+                                    barVisible = false
+                                    cn.ac.oac.glimbrowser.platform.setSystemBarsHidden(true)
+                                }
+                                if (dy < -6) {
+                                    barVisible = true
+                                    cn.ac.oac.glimbrowser.platform.setSystemBarsHidden(false)
+                                }
                             },
                             dispatch = dispatch,
                             modifier = m,
@@ -401,6 +407,14 @@ private fun CompactShell(
             pageUrl = state.currentTab?.url,
             onClose = { dispatch(BrowserController.Event.ToggleAiDrawer(false)) },
         )
+
+        // 离开网页时恢复系统栏（避免"两条底栏"或无栏）
+        androidx.compose.runtime.LaunchedEffect(onHome, state.searchOpen, state.navDestination) {
+            if (onHome || state.searchOpen || state.navDestination != NavDestination.TABS) {
+                barVisible = true
+                cn.ac.oac.glimbrowser.platform.setSystemBarsHidden(false)
+            }
+        }
 
         // 悬浮底栏（下滑隐藏 / 上滑显现；内容不再被硬性占位）
         val barOffset by androidx.compose.animation.core.animateDpAsState(
@@ -852,8 +866,14 @@ private fun ExpandedShell(
                             onScroll = { y ->
                                 val dy = y - lastScrollY
                                 lastScrollY = y
-                                if (dy > 10 && y > 64) barVisible = false
-                                if (dy < -6) barVisible = true
+                                if (dy > 10 && y > 64) {
+                                    barVisible = false
+                                    cn.ac.oac.glimbrowser.platform.setSystemBarsHidden(true)
+                                }
+                                if (dy < -6) {
+                                    barVisible = true
+                                    cn.ac.oac.glimbrowser.platform.setSystemBarsHidden(false)
+                                }
                             },
                             dispatch = dispatch,
                             modifier = m,

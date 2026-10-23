@@ -196,8 +196,9 @@ class AndroidWebViewEngine(
 
         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: android.webkit.WebResourceError?) {
             super.onReceivedError(view, request, error)
-            if (request?.isForMainFrame == true) {
-                val url = request.url.toString()
+            // 部分机型在 provisional 失败时会传 null request；一律按主文档处理（minSdk 26 无兼容负担）
+            if (request == null || request.isForMainFrame) {
+                val url = request?.url?.toString() ?: view?.url.orEmpty()
                 notifyError(url, friendlyError(error?.errorCode ?: 0, error?.description?.toString()))
             }
         }

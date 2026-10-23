@@ -224,7 +224,13 @@ private fun ErrorCard(message: String, onRetry: () -> Unit, onDismiss: () -> Uni
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("\u26a0\ufe0f \u7f51\u9875\u8bbf\u95ee\u62a5\u9519", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+            cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                cn.ac.oac.glimbrowser.ui.design.GlimIconName.INFO,
+                size = 28.dp,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text("网页访问报错", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
             Spacer(modifier = Modifier.height(8.dp))
             Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(16.dp))
