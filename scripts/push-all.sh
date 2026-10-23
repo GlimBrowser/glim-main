@@ -8,6 +8,8 @@
 #   ./scripts/push-all.sh --subs-only            # 只推子仓库
 #   ./scripts/push-all.sh -m "feat: xxx"         # 先提交全部改动，再推送
 #   ./scripts/push-all.sh --allow-dirty          # 允许工作区有未提交改动（不建议）
+#   ./scripts/push-all.sh --check-only           # 只做子仓库存在性预检，不推送
+#   ./scripts/push-all.sh --no-skip-missing      # 缺失子仓库也强行推送（会失败）
 #
 # 环境变量：
 #   SPLIT_ORG     组织名（默认 GlimBrowser）
@@ -25,6 +27,8 @@ DRY=0
 DO_MAIN=1
 DO_SUBS=1
 ALLOW_DIRTY=0
+CHECK_ONLY=0
+SKIP_MISSING=1
 
 usage() { sed -n '2,20p' "$0"; exit 0; }
 
@@ -34,6 +38,8 @@ while [[ $# -gt 0 ]]; do
     --main-only) DO_SUBS=0; shift ;;
     --subs-only) DO_MAIN=0; shift ;;
     --allow-dirty) ALLOW_DIRTY=1; shift ;;
+    --check-only) CHECK_ONLY=1; shift ;;
+    --no-skip-missing) SKIP_MISSING=0; shift ;;
     -m|--message) COMMIT_MSG="${2:-}"; shift 2 ;;
     -h|--help) usage ;;
     *) echo "未知参数：$1（--help 查看用法）"; exit 1 ;;
@@ -74,22 +80,45 @@ if [[ "$dirty" != "0" && "$ALLOW_DIRTY" != "1" ]]; then
 fi
 
 # --- 2. 子仓库存在性预检（ls-remote，不需要 gh）---
+MISSING_PATHS=()
+EXISTING_PATHS=()
 if [[ "$DO_SUBS" == "1" && "$DRY" != "1" ]]; then
   echo "== 预检子仓库是否存在（https）..."
-  missing=()
+  fail_count=0
+  total=0
   while IFS='|' read -r path repo desc; do
     [[ -z "${path// }" || "${path:0:1}" == "#" ]] && continue
-    if ! git ls-remote --exit-code "https://github.com/$ORG/$repo.git" >/dev/null 2>&1; then
-      missing+=("$repo")
+    total=$((total + 1))
+    if git ls-remote --exit-code "https://github.com/$ORG/$repo.git" >/dev/null 2>&1; then
+      EXISTING_PATHS+=("$path")
+    else
+      MISSING_PATHS+=("$path")
+      fail_count=$((fail_count + 1))
     fi
   done < "$CONF"
-  if [[ ${#missing[@]} -gt 0 ]]; then
-    echo "!! 以下子仓库不存在或无权限（先在组织下创建）："
-    printf '   - https://github.com/%s/%s\n' "$ORG" "${missing[@]}"
-    echo "   创建：./scripts/create-repos.sh    （或手动在组织页新建）"
-    echo "   本次仍会继续推送主仓库；子仓库推送会失败。"
+
+  if [[ ${#MISSING_PATHS[@]} -gt 0 ]]; then
+    echo "!! 有 ${#MISSING_PATHS[@]}/${total} 个子仓库不存在或无权限："
+    for p in "${MISSING_PATHS[@]}"; do
+      repo="$(awk -F'|' -v p="$p" '$1==p{print $2}' "$CONF")"
+      echo "   - https://github.com/$ORG/${repo:-$p}"
+    done
+    if [[ "$fail_count" == "$total" ]]; then
+      echo "   全部失败：通常是仓库还没创建，或本机没有该组织的访问凭证。"
+    fi
+    echo "   创建：./scripts/create-repos.sh        （或手动在 https://github.com/orgs/$ORG/repositories/new 新建）"
+    if [[ "$SKIP_MISSING" == "1" ]]; then
+      echo "   本次将跳过不存在的子仓库，只推送已存在的 $((total - fail_count)) 个。"
+      echo "   （想强行全部推送：加 --no-skip-missing）"
+    fi
     echo
   fi
+fi
+
+if [[ "$CHECK_ONLY" == "1" ]]; then
+  echo "== 仅检查（--check-only），不推送"
+  echo "   存在：${#EXISTING_PATHS[@]}  缺失：${#MISSING_PATHS[@]}"
+  exit 0
 fi
 
 # --- 3. 主仓库 ---
@@ -105,6 +134,14 @@ if [[ "$DO_SUBS" == "1" ]]; then
   echo "== 拆分并推送子仓库"
   if [[ "$DRY" == "1" ]]; then
     SPLIT_ORG="$ORG" SPLIT_DRY_RUN=1 "$ROOT/scripts/split-repos.sh" --push
+  elif [[ "$SKIP_MISSING" == "1" && ${#MISSING_PATHS[@]} -gt 0 ]]; then
+    if [[ ${#EXISTING_PATHS[@]} -eq 0 ]]; then
+      echo "   没有已存在的子仓库，跳过。创建后重跑：./scripts/create-repos.sh"
+    else
+      for p in "${EXISTING_PATHS[@]}"; do
+        SPLIT_ORG="$ORG" "$ROOT/scripts/split-repos.sh" --push --only "$p" || true
+      done
+    fi
   else
     SPLIT_ORG="$ORG" "$ROOT/scripts/split-repos.sh" --push
   fi
