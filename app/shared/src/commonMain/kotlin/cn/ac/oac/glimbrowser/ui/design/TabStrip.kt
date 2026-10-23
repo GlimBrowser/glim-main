@@ -84,7 +84,9 @@ fun FloatingTabStrip(
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
                             .clickable { onClose(tab.id) },
                         contentAlignment = Alignment.Center,
-                    ) { Text("×", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline) }
+                    ) {
+                        GlimIcon(GlimIconName.CLOSE, size = 12.dp, color = MaterialTheme.colorScheme.outline)
+                    }
                 }
             }
         }
@@ -93,6 +95,6 @@ fun FloatingTabStrip(
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clickable(onClick = onNewTab),
             contentAlignment = Alignment.Center,
-        ) { Text("＋", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline) }
+        ) { GlimIcon(GlimIconName.PLUS, size = 18.dp, color = MaterialTheme.colorScheme.outline) }
     }
 }

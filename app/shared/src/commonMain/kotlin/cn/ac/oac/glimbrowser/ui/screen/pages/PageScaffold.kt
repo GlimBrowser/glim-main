@@ -46,7 +46,7 @@ fun PageScaffold(
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            cn.ac.oac.glimbrowser.ui.design.GlimIconButton("‹", onBack, size = 34)
+            cn.ac.oac.glimbrowser.ui.design.GlimIconButton(cn.ac.oac.glimbrowser.ui.design.GlimIconName.BACK, onBack, size = 34)
             Spacer(modifier = Modifier.width(8.dp))
             Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.weight(1f))

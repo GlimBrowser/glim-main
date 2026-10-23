@@ -154,15 +154,15 @@ private fun MenuRow(item: MenuItem, onClick: () -> Unit) {
 /** 极简单字形图标（Phase 2 不引图标库；Phase 3 接容器后换矢量资源，字形仅占位辨识）。 */
 @Composable
 private fun MenuGlyph(icon: MenuItemIcon) {
-    val glyph = when (icon) {
-        MenuItemIcon.BOOKMARK -> "☆"
-        MenuItemIcon.HISTORY -> "◷"
-        MenuItemIcon.DOWNLOAD -> "↓"
-        MenuItemIcon.PLUGIN -> "⬡"
-        MenuItemIcon.SETTINGS -> "⚙"
-        MenuItemIcon.NEW_TAB -> "＋"
-        MenuItemIcon.INCOGNITO -> "◎"
-        MenuItemIcon.DESKTOP_MODE -> "▣"
+    val name = when (icon) {
+        MenuItemIcon.BOOKMARK -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.BOOKMARK
+        MenuItemIcon.HISTORY -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.HISTORY
+        MenuItemIcon.DOWNLOAD -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.DOWNLOAD
+        MenuItemIcon.PLUGIN -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.PLUGIN
+        MenuItemIcon.SETTINGS -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.SETTINGS
+        MenuItemIcon.NEW_TAB -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.PLUS
+        MenuItemIcon.INCOGNITO -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.INCOGNITO
+        MenuItemIcon.DESKTOP_MODE -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.DESKTOP
     }
     Box(
         modifier = Modifier
@@ -171,6 +171,10 @@ private fun MenuGlyph(icon: MenuItemIcon) {
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = glyph, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+            name = name,
+            size = 20.dp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

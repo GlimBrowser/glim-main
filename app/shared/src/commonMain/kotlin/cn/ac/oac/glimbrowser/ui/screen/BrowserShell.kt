@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,7 +21,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -93,6 +97,9 @@ private fun CompactShell(
 ) {
     // 每标签引擎池（切换不销毁 → 页面状态/缓存保留，108 修复）
     val pool = rememberEnginePool(aliveIds = state.tabs.tabs.map { it.id }.toSet())
+    // 悬浮底栏：网页下滑隐藏、上滑显现
+    var barVisible by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    var lastScrollY by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     // 仓库（书签/历史/插件/设置面板的真实数据源）
     val panelRepository = cn.ac.oac.glimbrowser.ai.localRepository.current
 
@@ -223,6 +230,12 @@ private fun CompactShell(
                             onRendererGone = {
                                 pool.remove(state.tabs.currentTabId ?: -1)
                                 dispatch(BrowserController.Event.RendererGone)
+                            },
+                            onScroll = { y ->
+                                val dy = y - lastScrollY
+                                lastScrollY = y
+                                if (dy > 10 && y > 64) barVisible = false
+                                if (dy < -6) barVisible = true
                             },
                             dispatch = dispatch,
                             modifier = m,
@@ -389,32 +402,39 @@ private fun CompactShell(
             onClose = { dispatch(BrowserController.Event.ToggleAiDrawer(false)) },
         )
 
-        // 底部标签条（原型 V3.1：位于内容与底部导航之间）
-        if (!state.searchOpen && !onHome) {
-            cn.ac.oac.glimbrowser.ui.design.FloatingTabStrip(
-                tabs = state.tabs.tabs,
-                currentTabId = state.tabs.currentTabId,
-                onSelect = { dispatch(BrowserController.Event.SelectTab(it)) },
-                onClose = { dispatch(BrowserController.Event.CloseTab(it)) },
-                onNewTab = { dispatch(BrowserController.Event.NewTab) },
-                compact = true,
-            )
-        }
-
-        // 底部导航（原型 .tabbar：首页/标签/菜单，选中玉青）
+        // 悬浮底栏（下滑隐藏 / 上滑显现；内容不再被硬性占位）
+        val barOffset by androidx.compose.animation.core.animateDpAsState(
+            targetValue = if (barVisible || onHome) 0.dp else 120.dp,
+            animationSpec = androidx.compose.animation.core.tween(260),
+            label = "bar-offset",
+        )
         BottomNavBar(
             current = state.navDestination,
             tabCount = state.tabs.tabs.size,
             onSelect = { dispatch(BrowserController.Event.Navigate(it)) },
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 10.dp)
+                .offset(y = barOffset),
         )
     }
 }
 
 /** 底部导航栏（PRD §6.1 首页/标签/菜单 三入口；原型 .tabbar）。 */
 @Composable
-private fun BottomNavBar(current: NavDestination, tabCount: Int, onSelect: (NavDestination) -> Unit) {
-    // 原型 V3.1 .bottom-nav：毛玻璃底 + 三入口（图标 + 文字）+ Home Indicator
-    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxWidth()) {
+private fun BottomNavBar(
+    current: NavDestination,
+    tabCount: Int,
+    onSelect: (NavDestination) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // 悬浮玻璃底栏（V3.1）：圆角 28、悬浮于内容之上、下滑隐藏
+    val shape = GlimTokens.RadiusXl28
+    androidx.compose.foundation.layout.Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(14.dp, shape)
+            .clip(shape)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.10f), shape),
+    ) {
         cn.ac.oac.glimbrowser.ui.design.PlatformBlurBackdrop(
             modifier = Modifier.matchParentSize(),
             radius = 22.dp,
@@ -429,7 +449,7 @@ private fun BottomNavBar(current: NavDestination, tabCount: Int, onSelect: (NavD
                 .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.10f)),
         )
         Column(
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 14.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
@@ -440,15 +460,6 @@ private fun BottomNavBar(current: NavDestination, tabCount: Int, onSelect: (NavD
                 NavBarItem("tabs", if (tabCount > 1) "标签 $tabCount" else "标签", active = current == NavDestination.TABS) { onSelect(NavDestination.TABS) }
                 NavBarItem("menu", "菜单", active = current == NavDestination.MENU) { onSelect(NavDestination.MENU) }
             }
-            Spacer(Modifier.height(6.dp))
-            // Home Indicator（原型 .home-indicator）
-            Box(
-                modifier = Modifier
-                    .width(134.dp)
-                    .height(5.dp)
-                    .clip(GlimTokens.RadiusPill)
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)),
-            )
         }
     }
 }
@@ -470,7 +481,15 @@ private fun NavBarItem(kind: String, label: String, active: Boolean, onClick: ()
                 .background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent),
             contentAlignment = Alignment.Center,
         ) {
-            NavIcon(kind, color)
+            cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                name = when (kind) {
+                    "home" -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.HOME
+                    "tabs" -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.TABS
+                    else -> cn.ac.oac.glimbrowser.ui.design.GlimIconName.MENU
+                },
+                size = 22.dp,
+                color = color,
+            )
         }
         Spacer(Modifier.height(3.dp))
         Text(
@@ -608,6 +627,9 @@ private fun ExpandedShell(
 ) {
     // 每标签引擎池（切换不销毁 → 页面状态/缓存保留，108 修复）
     val pool = rememberEnginePool(aliveIds = state.tabs.tabs.map { it.id }.toSet())
+    // 悬浮底栏：网页下滑隐藏、上滑显现
+    var barVisible by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    var lastScrollY by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     // 仓库（书签/历史/插件/设置面板的真实数据源）
     val panelRepository = cn.ac.oac.glimbrowser.ai.localRepository.current
 
@@ -827,6 +849,12 @@ private fun ExpandedShell(
                                 pool.remove(state.tabs.currentTabId ?: -1)
                                 dispatch(BrowserController.Event.RendererGone)
                             },
+                            onScroll = { y ->
+                                val dy = y - lastScrollY
+                                lastScrollY = y
+                                if (dy > 10 && y > 64) barVisible = false
+                                if (dy < -6) barVisible = true
+                            },
                             dispatch = dispatch,
                             modifier = m,
                             homeContent = {
@@ -951,14 +979,14 @@ private fun NavigationRail(
         horizontalAlignment = Alignment.Start,
     ) {
         RailGroup("浏览")
-        RailItem("⌂", "首页", active = current == NavDestination.HOME) { onSelect(NavDestination.HOME) }
-        RailItem("▦", "标签", active = current == NavDestination.TABS) { onSelect(NavDestination.TABS) }
+        RailItem(cn.ac.oac.glimbrowser.ui.design.GlimIconName.HOME, "首页", active = current == NavDestination.HOME) { onSelect(NavDestination.HOME) }
+        RailItem(cn.ac.oac.glimbrowser.ui.design.GlimIconName.TABS, "标签", active = current == NavDestination.TABS) { onSelect(NavDestination.TABS) }
         Spacer(modifier = Modifier.height(6.dp))
         RailGroup("智能")
-        RailItem("✦", "AI 助手", active = false) { onSelect(NavDestination.MENU) }
-        RailItem("⋯", "菜单", active = current == NavDestination.MENU) { onSelect(NavDestination.MENU) }
+        RailItem(cn.ac.oac.glimbrowser.ui.design.GlimIconName.SPARKLE, "AI 助手", active = false) { onSelect(NavDestination.MENU) }
+        RailItem(cn.ac.oac.glimbrowser.ui.design.GlimIconName.MENU, "菜单", active = current == NavDestination.MENU) { onSelect(NavDestination.MENU) }
         Spacer(modifier = Modifier.weight(1f))
-        RailItem("⚙", "设置", active = false) { onSelect(NavDestination.MENU) }
+        RailItem(cn.ac.oac.glimbrowser.ui.design.GlimIconName.SETTINGS, "设置", active = false) { onSelect(NavDestination.MENU) }
     }
 }
 
@@ -973,7 +1001,12 @@ private fun RailGroup(label: String) {
 }
 
 @Composable
-private fun RailItem(glyph: String, label: String, active: Boolean, onClick: () -> Unit) {
+private fun RailItem(
+    icon: cn.ac.oac.glimbrowser.ui.design.GlimIconName,
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -984,9 +1017,9 @@ private fun RailItem(glyph: String, label: String, active: Boolean, onClick: () 
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = glyph,
-            style = MaterialTheme.typography.titleMedium,
+        cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+            name = icon,
+            size = 20.dp,
             color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
         )
         Spacer(Modifier.width(10.dp))

@@ -40,6 +40,8 @@ fun BrowserContainer(
     pendingReload: Boolean = false,
     /** 渲染进程崩溃时回调（Shell 负责移除并重建该标签引擎）。 */
     onRendererGone: () -> Unit = {},
+    /** 页面滚动回调（悬浮底栏隐藏）。 */
+    onScroll: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
     homeContent: @Composable () -> Unit,
 ) {
@@ -51,6 +53,7 @@ fun BrowserContainer(
     // 仓库（插件执行需要读安装记录；在组合上下文取，避免在回调里读 CompositionLocal）
     val pluginRepository = cn.ac.oac.glimbrowser.ai.localRepository.current
     val onRendererGoneCb = onRendererGone
+    val onScrollCb = onScroll
 
     // 监听器按当前标签绑定（切换标签时重绑到该标签的引擎；池化后引擎可能为 null——占位）
     DisposableEffect(engine, activeTabId) {
@@ -92,6 +95,10 @@ fun BrowserContainer(
                 override fun onAdBlocked(url: String) {
                     // 主线程：统计 + 护盾计数（后台线程只做只读匹配）
                     dispatch(BrowserController.Event.AdBlocked(url))
+                }
+
+                override fun onScroll(scrollY: Int) {
+                    onScrollCb(scrollY)
                 }
 
                 override fun onRendererGone(url: String) {

@@ -242,7 +242,11 @@ private fun TabCard(
                 .clickable(onClick = onClose),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = "✕", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.labelMedium)
+            cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                    cn.ac.oac.glimbrowser.ui.design.GlimIconName.CLOSE,
+                    size = 14.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                )
         }
         // "关闭其他" 快捷（原型菜单语义，桌面/大屏常用；Phase 2 收进卡片尾部小按钮）
         Box(

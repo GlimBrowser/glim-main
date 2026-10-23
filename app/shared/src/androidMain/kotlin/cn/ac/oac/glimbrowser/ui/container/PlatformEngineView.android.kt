@@ -75,6 +75,10 @@ private fun newWebView(context: android.content.Context, webEngine: AndroidWebVi
         layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         // 深色适配：WebView 底色先跟随（避免首帧白闪），细节由 setDarkMode 控制
         setBackgroundColor(if (cn.ac.oac.glimbrowser.ui.theme.ThemeState.isDark) 0xFF101413.toInt() else 0xFFFAF8F3.toInt())
+        // 滚动回调：供悬浮底栏下滑隐藏（View 级 API，WebView 滚动时触发）
+        setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            webEngine.notifyScroll(scrollY)
+        }
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.databaseEnabled = true
@@ -122,6 +126,11 @@ class AndroidWebViewEngine(
 
     private var webView: WebView? = null
     private var listener: BrowserEngine.Listener? = null
+
+    /** 页面滚动 → UI（悬浮底栏下滑隐藏）。 */
+    internal fun notifyScroll(scrollY: Int) {
+        listener?.onScroll(scrollY)
+    }
 
     /**
      * 请求级拦截（PRD §3.3.5 Android 完整能力）：由容器注入 adfilter.shouldIntercept。

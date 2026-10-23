@@ -149,7 +149,7 @@ private fun GuideWelcome(onEvent: (ApiGuideEvent) -> Unit) {
     Text("AI 未配置", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
     Spacer(modifier = Modifier.height(6.dp))
     Text(
-        "✨ 摘要和问答需要你自己的 AI 服务。三步完成，密钥只保存在本机安全区。",
+        "摘要和问答需要你自己的 AI 服务。三步完成，密钥只保存在本机安全区。",
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(modifier = Modifier.height(14.dp))
@@ -275,7 +275,7 @@ private fun GuideStep3(state: ApiGuideState, onEvent: (ApiGuideEvent) -> Unit) {
         )
     }
     Spacer(modifier = Modifier.height(14.dp))
-    PrimaryButton("完成并启用 ✨") { onEvent(ApiGuideEvent.Finish) }
+    PrimaryButton("完成并启用") { onEvent(ApiGuideEvent.Finish) }
 }
 
 @Composable
@@ -283,7 +283,7 @@ private fun GuideDone(onEvent: (ApiGuideEvent) -> Unit) {
     Text("配置完成", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
     Spacer(modifier = Modifier.height(6.dp))
     Text(
-        "✨ 已可用：点地址栏的 ✨ 可以摘要当前页面，也能做划词解释、翻译和页面问答。",
+        "已可用：点地址栏的 AI 按钮可以摘要当前页面，也能做划词解释、翻译和页面问答。",
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(modifier = Modifier.height(14.dp))

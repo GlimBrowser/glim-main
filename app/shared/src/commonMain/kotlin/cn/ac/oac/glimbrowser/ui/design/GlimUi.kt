@@ -79,7 +79,7 @@ fun UnifiedToolbar(
 /** 工具栏图标按钮（32dp；按下缩放由 Compose 交互态自然呈现）。 */
 @Composable
 fun GlimIconButton(
-    glyph: String,
+    icon: GlimIconName,
     onClick: () -> Unit,
     enabled: Boolean = true,
     accent: Boolean = false,
@@ -99,9 +99,9 @@ fun GlimIconButton(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            glyph,
-            style = MaterialTheme.typography.labelLarge,
+        GlimIcon(
+            name = icon,
+            size = (size - 10).dp,
             color = when {
                 accent -> MaterialTheme.colorScheme.onPrimary
                 enabled -> MaterialTheme.colorScheme.onSurface

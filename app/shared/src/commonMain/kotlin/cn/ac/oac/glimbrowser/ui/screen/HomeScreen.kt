@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.sp
 import cn.ac.oac.glimbrowser.model.DefaultQuickSites
 import cn.ac.oac.glimbrowser.model.HomeCard
 import cn.ac.oac.glimbrowser.model.QuickSite
+import cn.ac.oac.glimbrowser.ui.design.enterStagger
+import cn.ac.oac.glimbrowser.ui.design.pressScale
 import cn.ac.oac.glimbrowser.ui.theme.GlimTokens
 import cn.ac.oac.glimbrowser.ui.theme.JadeLight
 
@@ -77,7 +79,8 @@ fun HomeScreen(
     ) {
         // 时间日期（原型 .home-top：大字时间 + 小字日期，轻量）
         Column(
-            modifier = Modifier.padding(top = 34.dp, bottom = 6.dp),
+            modifier = Modifier.padding(top = 36.dp, bottom = 4.dp)
+                .enterStagger(0),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -100,18 +103,25 @@ fun HomeScreen(
         }
 
         // 搜索/地址输入框（原型 .searchbar 胶囊）
+        val searchInteraction = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
         Row(
             modifier = Modifier
                 .padding(start = 20.dp, end = 20.dp, top = 24.dp)
                 .fillMaxWidth()
+                .enterStagger(1)
+                .pressScale(searchInteraction, pressedScale = 0.98f)
                 .clip(GlimTokens.RadiusPill)
                 .background(MaterialTheme.colorScheme.surface)
                 .border(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f), GlimTokens.RadiusPill)
-                .clickable(onClick = onSearchBarClick)
+                .clickable(interactionSource = searchInteraction, indication = null, onClick = onSearchBarClick)
                 .padding(start = 18.dp, end = 10.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SearchGlyph(modifier = Modifier.size(18.dp))
+            cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SEARCH,
+                size = 18.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "搜索或输入网址",
@@ -122,21 +132,28 @@ fun HomeScreen(
                 modifier = Modifier.weight(1f),
             )
             // 原型 .s-ai：28dp 玉青圆钮
+            val aiInteraction = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
             Box(
                 modifier = Modifier
                     .size(28.dp)
+                    .pressScale(aiInteraction, pressedScale = 0.90f)
                     .clip(GlimTokens.RadiusPill)
                     .background(MaterialTheme.colorScheme.primary)
-                    .clickable(onClick = onAiClick),
+                    .clickable(interactionSource = aiInteraction, indication = null, onClick = onAiClick),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("✦", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimary)
+                cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                    name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SPARKLE,
+                    size = 15.dp,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    filled = true,
+                )
             }
         }
 
         // 快捷站点 8 宫格（PRD §3.5.3；Phase 2 默认 6 + 添加 + 更多占位 = 8 格）
         val sites = quickSites.ifEmpty { DefaultQuickSites.all }
-        Column(modifier = Modifier.padding(top = 22.dp)) {
+        Column(modifier = Modifier.padding(top = 28.dp).enterStagger(2)) {
             // 两行四列（原型 grid-template-columns:repeat(4,1fr)）——用固定两行 Row 实现更贴近原型
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp),
@@ -181,8 +198,9 @@ fun HomeScreen(
 
         // 可选卡片（隐私统计 / AI 快速入口）——原型 .cards，仅展示已开启者
         Column(
-            modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 20.dp, bottom = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 36.dp)
+                .enterStagger(3),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (HomeCard.PRIVACY.id in enabledCardIds) {
                 PrivacyMiniCard(todayBlocked = todayBlocked, series = blockedSeries)
@@ -200,14 +218,18 @@ data class HomeClock(val time: String, val date: String)
 /** 快捷站点单元格（原型 .qsite：字母占位图 + 名称）。 */
 @Composable
 private fun QuickSiteCell(site: QuickSite, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val interaction = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Column(
-        modifier = modifier.clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).padding(vertical = 4.dp),
+        modifier = modifier.clip(RoundedCornerShape(16.dp))
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         cn.ac.oac.glimbrowser.ui.design.FavTile(
             letter = site.letter,
             size = 56,
             tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.pressScale(interaction),
         )
         Spacer(modifier = Modifier.height(7.dp))
         Text(
@@ -295,29 +317,44 @@ private fun AiMiniCard(configured: Boolean, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                    name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SPARKLE,
+                    size = 14.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = "AI 助手",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             Text(
-                text = "✦ AI 助手",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = if (configured) "点 ✦ 摘要当前页，或与页面问答" else "点击 ✦ 完成配置后即可摘要与问答",
+                text = if (configured) "点右侧按钮摘要当前页，或与页面问答" else "点击右侧按钮完成配置后即可摘要与问答",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                 color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(top = 3.dp),
                 textAlign = TextAlign.Start,
             )
         }
-        // ✦ 主按钮（原型 .ai-btn：42dp 玉青圆钮）
+        // 主按钮（原型 .ai-btn：42dp 玉青圆钮）
+        val cardInteraction = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
         Box(
             modifier = Modifier
                 .size(42.dp)
+                .pressScale(cardInteraction, pressedScale = 0.92f)
                 .clip(GlimTokens.RadiusPill)
                 .background(MaterialTheme.colorScheme.primary)
-                .clickable(onClick = onClick),
+                .clickable(interactionSource = cardInteraction, indication = null, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = "✦", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.titleMedium)
+            cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SPARKLE,
+                size = 20.dp,
+                color = MaterialTheme.colorScheme.onPrimary,
+                filled = true,
+            )
         }
     }
 }

@@ -74,7 +74,11 @@ fun SearchOverlay(
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SearchGlyph()
+                cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                    name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SEARCH,
+                    size = 18.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
                 Spacer(Modifier.width(10.dp))
                 BasicTextField(
                     value = query,
@@ -103,7 +107,13 @@ fun SearchOverlay(
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { onQueryChange("") },
                         contentAlignment = Alignment.Center,
-                    ) { Text("✕", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline) }
+                    ) {
+                        cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                            name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.CLOSE,
+                            size = 12.dp,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    }
                 }
             }
             Spacer(Modifier.width(10.dp))
@@ -119,9 +129,9 @@ fun SearchOverlay(
                     .clickable(enabled = query.isNotBlank()) { onSubmit(query) },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    "→",
-                    style = MaterialTheme.typography.titleMedium,
+                cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                    name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.ARROW_RIGHT,
+                    size = 18.dp,
                     color = if (query.isBlank()) MaterialTheme.colorScheme.outline else Color.White,
                 )
             }
@@ -134,7 +144,7 @@ fun SearchOverlay(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
         )
         Text(
-            "✦ 支持搜索联想与快捷搜索，敬请期待",
+            "支持搜索联想与快捷搜索，敬请期待",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.8f),
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
@@ -147,7 +157,7 @@ fun SearchOverlay(
                 GroupTitle("最近访问")
                 recent.forEach { (url, title) ->
                     SuggestRow(
-                        icon = "🕐",
+                        icon = cn.ac.oac.glimbrowser.ui.design.GlimIconName.CLOCK,
                         title = title.ifBlank { url },
                         subtitle = url,
                         onClick = { onSubmit(url) },
@@ -156,7 +166,12 @@ fun SearchOverlay(
             }
             GroupTitle("快捷站点")
             listOf("维基百科" to "https://zh.wikipedia.org", "GitHub" to "https://github.com").forEach { (name, url) ->
-                SuggestRow(icon = name.take(1), title = name, subtitle = url, onClick = { onSubmit(url) })
+                SuggestRow(
+                    icon = cn.ac.oac.glimbrowser.ui.design.GlimIconName.GLOBE,
+                    title = name,
+                    subtitle = url,
+                    onClick = { onSubmit(url) },
+                )
             }
             Spacer(Modifier.height(30.dp))
         }
@@ -174,7 +189,12 @@ private fun GroupTitle(text: String) {
 }
 
 @Composable
-private fun SuggestRow(icon: String, title: String, subtitle: String, onClick: () -> Unit) {
+private fun SuggestRow(
+    icon: cn.ac.oac.glimbrowser.ui.design.GlimIconName,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -188,7 +208,13 @@ private fun SuggestRow(icon: String, title: String, subtitle: String, onClick: (
                 .clip(GlimTokens.Radius12)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
             contentAlignment = Alignment.Center,
-        ) { Text(icon, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        ) {
+            cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                name = icon,
+                size = 17.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -196,7 +222,11 @@ private fun SuggestRow(icon: String, title: String, subtitle: String, onClick: (
                 Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        Text("↗", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+        cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+            name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.ARROW_RIGHT,
+            size = 14.dp,
+            color = MaterialTheme.colorScheme.outline,
+        )
     }
 }
 

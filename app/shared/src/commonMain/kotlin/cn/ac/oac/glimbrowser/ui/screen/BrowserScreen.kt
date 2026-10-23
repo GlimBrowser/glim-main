@@ -78,30 +78,46 @@ fun BrowserScreen(
         // 统一工具栏（Safari 风格）：← → ↻ + 地址胶囊 + 🛡 ✦ ⋯
         cn.ac.oac.glimbrowser.ui.design.UnifiedToolbar(
             leading = {
-                cn.ac.oac.glimbrowser.ui.design.GlimIconButton("←", onBack, enabled = tab?.canGoBack == true)
+                cn.ac.oac.glimbrowser.ui.design.GlimIconButton(cn.ac.oac.glimbrowser.ui.design.GlimIconName.BACK, onBack, enabled = tab?.canGoBack == true)
                 Spacer(Modifier.width(2.dp))
-                cn.ac.oac.glimbrowser.ui.design.GlimIconButton("→", onForward, enabled = tab?.canGoForward == true)
+                cn.ac.oac.glimbrowser.ui.design.GlimIconButton(cn.ac.oac.glimbrowser.ui.design.GlimIconName.FORWARD, onForward, enabled = tab?.canGoForward == true)
                 Spacer(Modifier.width(2.dp))
-                cn.ac.oac.glimbrowser.ui.design.GlimIconButton("↻", onRetry, enabled = tab != null)
+                cn.ac.oac.glimbrowser.ui.design.GlimIconButton(cn.ac.oac.glimbrowser.ui.design.GlimIconName.RELOAD, onRetry, enabled = tab != null)
             },
             trailing = {
-                cn.ac.oac.glimbrowser.ui.design.GlimIconButton("🛡", onShieldClick)
+                cn.ac.oac.glimbrowser.ui.design.GlimIconButton(cn.ac.oac.glimbrowser.ui.design.GlimIconName.SHIELD, onShieldClick)
                 Spacer(Modifier.width(2.dp))
-                cn.ac.oac.glimbrowser.ui.design.GlimIconButton("✦", onAiClick, accent = true)
+                cn.ac.oac.glimbrowser.ui.design.GlimIconButton(cn.ac.oac.glimbrowser.ui.design.GlimIconName.SPARKLE, onAiClick, accent = true)
             },
             center = {
                 cn.ac.oac.glimbrowser.ui.design.UrlPill(
                     text = tab?.faviconDomain?.ifEmpty { tab.url }?.ifEmpty { "搜索或输入网址" } ?: "搜索或输入网址",
                     onClick = onAddressBarClick,
-                    leading = { Text(if (incognito) "🕶" else "🔒", style = MaterialTheme.typography.labelSmall) },
+                    leading = {
+                        cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                            name = if (incognito) cn.ac.oac.glimbrowser.ui.design.GlimIconName.INCOGNITO
+                                   else cn.ac.oac.glimbrowser.ui.design.GlimIconName.LOCK,
+                            size = 14.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    },
                     trailing = {
                         if (shieldCount > 0) {
-                            cn.ac.oac.glimbrowser.ui.design.GlimBadge("🛡 $shieldCount")
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                                    name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SHIELD,
+                                    size = 12.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(Modifier.width(3.dp))
+                                cn.ac.oac.glimbrowser.ui.design.GlimBadge("$shieldCount")
+                            }
                         }
                         Spacer(Modifier.width(4.dp))
-                        Text(
-                            if (bookmarked) "★" else "☆",
-                            style = MaterialTheme.typography.labelMedium,
+                        cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                            name = if (bookmarked) cn.ac.oac.glimbrowser.ui.design.GlimIconName.STAR_FILLED
+                                   else cn.ac.oac.glimbrowser.ui.design.GlimIconName.STAR,
+                            size = 18.dp,
                             color = if (bookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                             modifier = Modifier.clip(GlimTokens.RadiusSm).clickable(onClick = onBookmarkClick).padding(horizontal = 3.dp),
                         )
@@ -127,16 +143,26 @@ fun BrowserScreen(
 /** 护盾徽标（原型 .badge-shield；暂停态琥珀色由 Phase 4 误杀闭环接入，Phase 2 恒玉青）。 */
 @Composable
 private fun ShieldBadge(count: Int, onClick: () -> Unit) {
-    Text(
-        text = "🛡 $count",
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(GlimTokens.RadiusPill)
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 3.dp),
-    )
+    ) {
+        cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+            name = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SHIELD,
+            size = 11.dp,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.width(3.dp))
+        Text(
+            text = "$count",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
 }
 
 /** 锁标（极简，纯 Compose；Phase 3 接真实 https 判定）。 */

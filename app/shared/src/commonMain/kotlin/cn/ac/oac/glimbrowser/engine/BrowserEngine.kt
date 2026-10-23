@@ -110,6 +110,9 @@ interface BrowserEngine {
 
         /** 页面渲染进程崩溃（重型页面 OOM 等）：需要重建该标签的内核。 */
         fun onRendererGone(url: String) {}
+
+        /** 页面滚动（Android 提供；用于悬浮底栏"下滑隐藏/上滑显现"）。 */
+        fun onScroll(scrollY: Int) {}
         fun onNavigationStateChanged(url: String, title: String?, canGoBack: Boolean, canGoForward: Boolean) {}
         fun onPageFinished(url: String, title: String?) {}
         fun onReceivedTitle(title: String?) {}

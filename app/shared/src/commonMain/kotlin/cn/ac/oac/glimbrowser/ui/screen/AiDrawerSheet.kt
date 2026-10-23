@@ -62,7 +62,15 @@ fun AiDrawerSheet(
         Box(modifier = Modifier.width(38.dp).height(4.dp).clip(GlimTokens.RadiusPill).background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)).align(Alignment.CenterHorizontally))
         Spacer(modifier = Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("✦ AI 助手", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+            cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                cn.ac.oac.glimbrowser.ui.design.GlimIconName.SPARKLE,
+                size = 16.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(5.dp))
+            Text("AI 助手", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        }
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 "AI 设置",
