@@ -2,10 +2,10 @@
 
 > 仓库组织：**https://github.com/GlimBrowser** ｜ 主仓库：**glim-main** — https://github.com/GlimBrowser/glim-main
 
-> 一个用 Kotlin Multiplatform + Compose Multiplatform 写成的多页浏览器。手机、平板、桌面共用一套内核抽象与界面组件，网页渲染交给各平台原生引擎（Android WebView / iOS WKWebView / 桌面与 Web 走 JVM 与浏览器）。
+> 一个用 Kotlin Multiplatform + Compose Multiplatform 写成的多页浏览器。手机、平板、桌面共用一套内核抽象与界面组件，网页渲染交给各平台原生引擎（Android WebView / iOS·macOS WKWebView / 桌面走 JVM）。
 
 <p>
-<img alt="platforms" src="https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20macOS%20%7C%20Windows%20%7C%20Web-1E6B58">
+<img alt="platforms" src="https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20macOS%20%7C%20Windows-1E6B58">
 <img alt="kotlin" src="https://img.shields.io/badge/Kotlin-2.4.20-1E6B58">
 <img alt="compose" src="https://img.shields.io/badge/Compose%20Multiplatform-1.12.1-1E6B58">
 <img alt="license" src="https://img.shields.io/badge/license-Non--Commercial%20(商业需授权)-9E3B2D">
@@ -68,9 +68,8 @@
 | iPhone / iPad | `iosArm64`, `iosSimulatorArm64` | WKWebView | ✅ |
 | macOS (Apple Silicon) | `macosArm64` | WKWebView | ✅ |
 | Windows / macOS Intel | `jvm`（Compose Desktop） | 待接入 | 🚧 壳已就绪 |
-| Web | `js`, `wasmJs` | 浏览器 iframe / 平台打开 | 🚧 壳已就绪 |
 
-> 说明：桌面 Windows 与 Intel Mac 走 JVM 目标（Compose Desktop 不提供 macosX64/mingwX64 的 UI 变体）；Web 端暂未内置网页内核。
+> 说明：桌面 Windows 与 Intel Mac 走 JVM 目标（Compose Desktop 不提供 macosX64/mingwX64 的 UI 变体）。
 
 ## 架构
 
@@ -123,9 +122,6 @@ cd GlimBrowser
 # 桌面（macOS / Windows）
 ./gradlew :app:desktopApp:run
 
-# Web
-./gradlew :app:webApp:wasmJsBrowserDevelopmentRun   # 现代浏览器
-./gradlew :app:webApp:jsBrowserDevelopmentRun       # 兼容旧浏览器
 ```
 
 iOS：用 Xcode 打开 `app/iosApp`，选择模拟器或真机运行。
@@ -138,8 +134,6 @@ iOS：用 Xcode 打开 `app/iosApp`，选择模拟器或真机运行。
           :app:shared:compileAndroidMain \
           :app:shared:compileKotlinIosSimulatorArm64 \
           :app:shared:compileKotlinMacosArm64 \
-          :app:shared:compileKotlinJs \
-          :app:shared:compileKotlinWasmJs
 
 # 共享层单测（覆盖状态机、规则引擎、协议解析、AI 配置等）
 ./gradlew :app:shared:jvmTest \
@@ -168,7 +162,6 @@ iOS：用 Xcode 打开 `app/iosApp`，选择模拟器或真机运行。
 │   ├── androidApp/      # Android 壳（Activity、Manifest、图标、主题）
 │   ├── iosApp/          # iOS 壳（Xcode 工程、Info.plist、AppIcon）
 │   ├── desktopApp/      # 桌面壳（Compose Desktop、打包配置、图标）
-│   ├── webApp/          # Web 壳（Wasm/JS 入口）
 │   └── shared/          # KMP 共享层：引擎抽象、Compose UI、状态管理
 ├── shared/
 │   ├── adfilter/        # 去广告规则引擎（ABP 子集、净化统计）
