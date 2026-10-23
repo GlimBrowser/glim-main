@@ -110,7 +110,14 @@ split_one() {
       echo "   [dry-run] git push --force $remote_show $branch:main"
       return 0
     fi
-    git subtree split --prefix="$path" -b "$branch" >/dev/null 2>&1
+    if ! git subtree split --prefix="$path" -b "$branch" >/dev/null 2>&1; then
+      echo "   !! 拆分失败（$path），跳过"
+      return 0
+    fi
+    if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
+      echo "   !! 拆分分支不存在（$branch），跳过"
+      return 0
+    fi
     attach_license "$branch"
     echo "   推送到 $remote_show"
     git push --force "$remote" "$branch:main"
