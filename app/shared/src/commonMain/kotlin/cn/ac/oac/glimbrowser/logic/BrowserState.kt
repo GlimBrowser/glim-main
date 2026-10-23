@@ -48,6 +48,8 @@ data class BrowserState(
 
     /** 三步引导状态（附件 D.4）。 */
     val apiGuide: ApiGuideState = ApiGuideState(),
+    /** 引导是否可见（WELCOME 步骤也要显示；此前按 step 判断导致"AI 配置打不开"）。 */
+    val apiGuideVisible: Boolean = false,
 
     /** 待重载标记（错误卡"重试"→ 容器观察到后 reload；消费后清零）。 */
     val pendingReload: Boolean = false,
@@ -257,13 +259,16 @@ class BrowserActions(
 
     /** ✨ 入口：未配置 → 打开三步引导；已配置 → 开 AI 抽屉（附件 D.4 轻/重入口，PRD §3.2.4）。 */
     fun onAiEntry(state: BrowserState): BrowserState =
-        if (state.aiConfigured) state.copy(aiDrawerOpen = true) else state.copy(apiGuide = ApiGuideActions.open(state.apiGuide))
+        if (state.aiConfigured) state.copy(aiDrawerOpen = true)
+        else state.copy(apiGuide = ApiGuideActions.open(state.apiGuide), apiGuideVisible = true)
 
     /** 三步引导事件分发（reduce 到 ApiGuideState）。 */
     fun onApiGuideEvent(state: BrowserState, event: cn.ac.oac.glimbrowser.ui.screen.ApiGuideEvent): BrowserState {
         val newGuide = event.applyTo(state.apiGuide)
         return state.copy(
             apiGuide = newGuide,
+            // 引导在 WELCOME/DONE 都保持可见，直到用户点"关闭"或返回
+            apiGuideVisible = true,
             aiConfigured = newGuide.step == ApiGuideState.Step.DONE || state.aiConfigured,
         )
     }
@@ -290,6 +295,7 @@ class BrowserActions(
                 baseUrlInput = baseUrl,
                 modelInput = model,
             ),
+            apiGuideVisible = true,
             aiDrawerOpen = false,
         )
 
@@ -356,7 +362,8 @@ class BrowserActions(
         state.copy(findMatches = matches, findIndex = index)
 
     /** 关闭引导浮层（保留配置进度）。 */
-    fun closeApiGuide(state: BrowserState): BrowserState = state.copy(apiGuide = ApiGuideActions.close(state.apiGuide))
+    fun closeApiGuide(state: BrowserState): BrowserState =
+        state.copy(apiGuide = ApiGuideActions.close(state.apiGuide), apiGuideVisible = false)
 
     fun togglePurifyReport(state: BrowserState, open: Boolean): BrowserState = state.copy(purifyReportOpen = open)
 

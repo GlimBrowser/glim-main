@@ -44,3 +44,4 @@ keystore.properties
 
 # --- 内部文档（PRD/进展记录，不随开源仓库发布）---
 docs/
+.github/

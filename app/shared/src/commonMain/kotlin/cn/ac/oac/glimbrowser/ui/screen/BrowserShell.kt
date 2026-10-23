@@ -151,7 +151,7 @@ private fun CompactShell(
             state.findOpen -> dispatch(BrowserController.Event.CloseFind)
             state.menuOpen -> dispatch(BrowserController.Event.ToggleMenu(false))
             state.tabSwitcherOpen -> dispatch(BrowserController.Event.ToggleTabSwitcher(false))
-            state.apiGuide.step != cn.ac.oac.glimbrowser.logic.ApiGuideState.Step.WELCOME -> dispatch(BrowserController.Event.CloseApiGuide)
+            state.apiGuideVisible -> dispatch(BrowserController.Event.CloseApiGuide)
             state.aiDrawerOpen -> dispatch(BrowserController.Event.ToggleAiDrawer(false))
             state.addressBarFocused -> dispatch(BrowserController.Event.AddressBarFocus(false))
             tab != null && tab.lastError != null -> dispatch(BrowserController.Event.RetryPage)
@@ -286,7 +286,7 @@ private fun CompactShell(
             }
 
             // 三步引导（真实测试连接）
-            if (state.apiGuide.step != cn.ac.oac.glimbrowser.logic.ApiGuideState.Step.WELCOME) {
+            if (state.apiGuideVisible) {
                 cn.ac.oac.glimbrowser.ui.screen.ApiGuideHost(
                     state = state.apiGuide,
                     runtime = cn.ac.oac.glimbrowser.ai.localAiRuntime.current,
@@ -695,7 +695,7 @@ private fun ExpandedShell(
             state.findOpen -> dispatch(BrowserController.Event.CloseFind)
             state.menuOpen -> dispatch(BrowserController.Event.ToggleMenu(false))
             state.tabSwitcherOpen -> dispatch(BrowserController.Event.ToggleTabSwitcher(false))
-            state.apiGuide.step != cn.ac.oac.glimbrowser.logic.ApiGuideState.Step.WELCOME -> dispatch(BrowserController.Event.CloseApiGuide)
+            state.apiGuideVisible -> dispatch(BrowserController.Event.CloseApiGuide)
             state.aiDrawerOpen -> dispatch(BrowserController.Event.ToggleAiDrawer(false))
             state.addressBarFocused -> dispatch(BrowserController.Event.AddressBarFocus(false))
             tab != null && tab.lastError != null -> dispatch(BrowserController.Event.RetryPage)
@@ -914,7 +914,7 @@ private fun ExpandedShell(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            if (state.apiGuide.step != cn.ac.oac.glimbrowser.logic.ApiGuideState.Step.WELCOME) {
+            if (state.apiGuideVisible) {
                 cn.ac.oac.glimbrowser.ui.screen.ApiGuideHost(
                     state = state.apiGuide,
                     runtime = cn.ac.oac.glimbrowser.ai.localAiRuntime.current,
