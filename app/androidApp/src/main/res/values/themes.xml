@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 无 ActionBar；系统栏透明交给 Compose 的 edge-to-edge + insets 处理。
+         windowBackground 用产品纸白，避免冷启动/换页白闪。 -->
+    <style name="Theme.GlimBrowser" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/glim_window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

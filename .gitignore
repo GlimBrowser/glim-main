@@ -1,0 +1,46 @@
+*.iml
+.kotlin
+.gradle
+**/build/
+xcuserdata
+!src/**/build/
+local.properties
+.idea
+.DS_Store
+captures
+.externalNativeBuild
+.cxx
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+node_modules/
+docs/
+
+# --- 本地环境与构建缓存（不入库）---
+.gradle-home/
+.konan-home/
+.konan-data/
+.playwright-tmp/
+.gradle/
+build/
+**/build/
+.kotlin/
+.idea/
+*.hprof
+*.apk
+*.aab
+
+# --- 密钥与本地配置（绝不入库）---
+local.properties
+keystore.properties
+*.jks
+*.keystore
+*.p12
+.env
+.env.*
+
+# --- 内部文档（PRD/进展记录，不随开源仓库发布）---
+docs/

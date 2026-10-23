@@ -1,0 +1,175 @@
+-- GlimBrowser 本地持久化 schema（PRD V1.2 §2.4：历史/书签/AI 档案/插件注册表/规则清单）
+-- 红线（000 §2）：ai_profiles 仅存 api_key_ref（引用），明文 Key 永不入库（平台 SecureKeyStore 职责）。
+-- 无痕标签不入 history（应用层写入前判定，PRD §3.1.3）；上报需域名哈希（PRD §7.2，上报层处理）。
+
+CREATE TABLE history_entry (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    url TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL DEFAULT '',
+    host TEXT NOT NULL DEFAULT '',           -- 便于域名级统计（上报前哈希，PRD §7.2）
+    visited_at INTEGER NOT NULL,             -- epoch ms
+    visit_count INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX history_entry_host ON history_entry(host);
+CREATE INDEX history_entry_visited_at ON history_entry(visited_at DESC);
+
+CREATE TABLE bookmark (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    url TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL DEFAULT '',
+    folder TEXT NOT NULL DEFAULT '',          -- 文件夹（PRD §3.1.4 书签文件夹）
+    created_at INTEGER NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX bookmark_folder ON bookmark(folder);
+
+CREATE TABLE ai_profile_record (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    base_url TEXT NOT NULL,
+    -- 红线：仅引用平台 SecureKeyStore 中的 Key；本列永不存明文 Key（000 §2 / PRD §3.2.1）
+    api_key_ref TEXT NOT NULL,
+    model TEXT NOT NULL,
+    timeout_seconds INTEGER NOT NULL DEFAULT 60,
+    stream_enabled INTEGER NOT NULL DEFAULT 1,
+    summary_language TEXT NOT NULL DEFAULT 'auto',
+    last_connectivity_json TEXT,             -- 附件 D.2 连通性结果缓存（无 Key）
+    capabilities_json TEXT,                  -- 附件 D.2.4 能力位
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE plugin_install (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    version TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    source_url TEXT NOT NULL DEFAULT '',
+    fingerprint TEXT NOT NULL DEFAULT '',
+    matches_json TEXT NOT NULL DEFAULT '[]',
+    permissions_json TEXT NOT NULL DEFAULT '[]',
+    granted_json TEXT NOT NULL DEFAULT '[]',   -- 逐项授权记录（PRD §3.4）
+    enabled INTEGER NOT NULL DEFAULT 0,
+    builtin INTEGER NOT NULL DEFAULT 0,
+    subscription_id TEXT,
+    revoked INTEGER NOT NULL DEFAULT 0,        -- 远程吊销（PRD §3.4）
+    installed_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE filter_setting (
+    key TEXT NOT NULL PRIMARY KEY,             -- global_enabled / site:<host> / layer:L1 ...
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE filter_stats_daily (
+    day TEXT NOT NULL,                          -- yyyy-MM-dd（PRD §3.3.3 报告按天）
+    category TEXT NOT NULL,
+    count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY(day, category)
+);
+
+-- ===== 查询 =====
+
+insertHistoryIfNew:
+INSERT OR IGNORE INTO history_entry(url, title, host, visited_at, visit_count)
+VALUES (?, ?, ?, ?, 1);
+
+touchHistory:
+UPDATE history_entry SET title = ?, visited_at = ?, visit_count = visit_count + 1 WHERE url = ?;
+
+searchHistory:
+SELECT * FROM history_entry
+WHERE title LIKE '%' || ? || '%' OR url LIKE '%' || ? || '%'
+ORDER BY visited_at DESC
+LIMIT ?;
+
+recentHistory:
+SELECT * FROM history_entry ORDER BY visited_at DESC LIMIT ?;
+
+clearHistory:
+DELETE FROM history_entry;
+
+deleteHistoryById:
+DELETE FROM history_entry WHERE id = ?;
+
+insertBookmark:
+INSERT OR IGNORE INTO bookmark(url, title, folder, created_at, position) VALUES (?, ?, ?, ?, ?);
+
+listBookmarks:
+SELECT * FROM bookmark ORDER BY folder, position, created_at DESC;
+
+deleteBookmark:
+DELETE FROM bookmark WHERE id = ?;
+
+deleteBookmarkByUrl:
+DELETE FROM bookmark WHERE url = ?;
+
+insertAiProfile:
+INSERT OR IGNORE INTO ai_profile_record(id, name, base_url, api_key_ref, model, timeout_seconds, stream_enabled, summary_language, last_connectivity_json, capabilities_json, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateAiProfile:
+UPDATE ai_profile_record SET name=?, base_url=?, api_key_ref=?, model=?, timeout_seconds=?, stream_enabled=?, summary_language=?, last_connectivity_json=?, capabilities_json=?, updated_at=? WHERE id=?;
+
+listAiProfiles:
+SELECT * FROM ai_profile_record ORDER BY updated_at DESC;
+
+getAiProfile:
+SELECT * FROM ai_profile_record WHERE id = ?;
+
+deleteAiProfile:
+DELETE FROM ai_profile_record WHERE id = ?;
+
+insertPlugin:
+INSERT OR IGNORE INTO plugin_install(id, name, version, description, source_url, fingerprint, matches_json, permissions_json, granted_json, enabled, builtin, subscription_id, revoked, installed_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updatePlugin:
+UPDATE plugin_install SET name=?, version=?, description=?, source_url=?, fingerprint=?, matches_json=?, permissions_json=?, granted_json=?, enabled=?, subscription_id=?, revoked=? WHERE id=?;
+
+listPlugins:
+SELECT * FROM plugin_install ORDER BY name;
+
+getPlugin:
+SELECT * FROM plugin_install WHERE id = ?;
+
+setPluginEnabled:
+UPDATE plugin_install SET enabled = ? WHERE id = ?;
+
+setPluginRevoked:
+UPDATE plugin_install SET revoked = 1, enabled = 0 WHERE id = ?;
+
+setPluginGranted:
+UPDATE plugin_install SET granted_json = ? WHERE id = ?;
+
+deletePlugin:
+DELETE FROM plugin_install WHERE id = ?;
+
+insertFilterSetting:
+INSERT OR IGNORE INTO filter_setting(key, value, updated_at) VALUES (?, ?, ?);
+
+updateFilterSetting:
+UPDATE filter_setting SET value = ?, updated_at = ? WHERE key = ?;
+
+getFilterSetting:
+SELECT value FROM filter_setting WHERE key = ?;
+
+allFilterSettings:
+SELECT * FROM filter_setting;
+
+deleteFilterSetting:
+DELETE FROM filter_setting WHERE key = ?;
+
+insertFilterStatDaily:
+INSERT OR IGNORE INTO filter_stats_daily(day, category, count) VALUES (?, ?, ?);
+
+addFilterStatDaily:
+UPDATE filter_stats_daily SET count = count + ? WHERE day = ? AND category = ?;
+
+dailyFilterStats:
+SELECT * FROM filter_stats_daily WHERE day = ?;
+
+sumTodayBlocked:
+SELECT COALESCE(SUM(count), 0) FROM filter_stats_daily WHERE day = ?;

@@ -1,0 +1,45 @@
+name: Split sub-repositories
+
+# 把 monorepo 的子目录拆分为独立仓库并推送。
+# 需要 Secrets: SPLIT_TOKEN（有 repo 权限的 PAT）
+#      Variables: SPLIT_ORG（GitHub 组织或用户名）
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: split-repos
+  cancel-in-progress: true
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout（需要完整历史，subtree split 依赖）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 读取子仓库清单
+        id: repos
+        run: |
+          echo "list<<EOF" >> "$GITHUB_OUTPUT"
+          grep -v '^\s*#' scripts/repos.conf | grep -v '^\s*$' >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: 逐个拆分并推送
+        env:
+          TOKEN: ${{ secrets.SPLIT_TOKEN }}
+          ORG: ${{ vars.SPLIT_ORG }}
+        run: |
+          set -euo pipefail
+          git config user.name  "glimbrowser-bot"
+          git config user.email "bot@users.noreply.github.com"
+          echo "${{ steps.repos.outputs.list }}" | while IFS='|' read -r path repo desc; do
+            [ -z "${path// }" ] && continue
+            echo "::group::$path → $repo"
+            git subtree split --prefix="$path" -b "split/$repo"
+            git push --force "https://x-access-token:${TOKEN}@github.com/${ORG}/${repo}.git" "split/$repo:main"
+            echo "::endgroup::"
+          done
