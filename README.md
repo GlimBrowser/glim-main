@@ -2,7 +2,7 @@
 
 > 仓库组织：**https://github.com/GlimBrowser** ｜ 主仓库：**glim-main** — https://github.com/GlimBrowser/glim-main
 
-> 一个用 Kotlin Multiplatform + Compose Multiplatform 写成的多页浏览器。手机、平板、桌面共用一套内核抽象与界面组件，网页渲染交给各平台原生引擎（Android WebView / iOS·macOS WKWebView / 桌面走 JVM）。
+> 一个用 Kotlin Multiplatform + Compose Multiplatform 写成的多页浏览器。手机、平板、桌面共用一套内核抽象与界面组件，网页渲染交给各平台原生引擎（Android、iOS/macOS 用系统内核，桌面走 JVM）。
 
 <p>
 <img alt="platforms" src="https://img.shields.io/badge/platforms-Android%20%7C%20iOS%20%7C%20macOS%20%7C%20Windows-1E6B58">
@@ -64,9 +64,9 @@
 
 | 形态 | 目标 | 网页引擎 | 状态 |
 |---|---|---|---|
-| 手机 / 平板 (Android) | `android` | 系统 WebView | ✅ |
-| iPhone / iPad | `iosArm64`, `iosSimulatorArm64` | WKWebView | ✅ |
-| macOS (Apple Silicon) | `macosArm64` | WKWebView | ✅ |
+| 手机 / 平板 (Android) | `android` | 系统内核 | ✅ |
+| iPhone / iPad | `iosArm64`, `iosSimulatorArm64` | 系统内核 | ✅ |
+| macOS (Apple Silicon) | `macosArm64` | 系统内核 | ✅ |
 | Windows / macOS Intel | `jvm`（Compose Desktop） | 待接入 | 🚧 壳已就绪 |
 
 > 说明：桌面 Windows 与 Intel Mac 走 JVM 目标（Compose Desktop 不提供 macosX64/mingwX64 的 UI 变体）。
@@ -80,8 +80,8 @@
 └───────────────┬───────────────────────────────────────────────┬────────────────────┘
                 │ BrowserEngine（expect/actual 接口）           │ Repository（SQLDelight）
    ┌────────────┴───────────┐                    ┌──────────────┴───────────────┐
-   │ Android WebView 引擎    │                    │ 书签 / 历史 / 下载 / AI 档案  │
-   │ iOS·macOS WKWebView 引擎│                    │ 插件安装 / 净化设置 / 会话    │
+   │ Android 系统内核        │                    │ 书签 / 历史 / 下载 / AI 档案  │
+   │ iOS·macOS 系统内核      │                    │ 插件安装 / 净化设置 / 会话    │
    └────────────────────────┘                    └──────────────────────────────┘
                 │
       ┌─────────┴──────────┬──────────────┬──────────────┐
@@ -94,7 +94,7 @@
 
 - **内核抽象**：`BrowserEngine` 定义加载/导航/查找/下载/清缓存/脚本执行与监听回调，平台差异全部收敛在 `actual` 实现里。
 - **状态管理**：所有交互都是 `BrowserController.Event`，每个事件用 `reduce(actions, state)` 纯函数迁移状态，便于单测与回放。
-- **每标签引擎池**：`EnginePool` 复用 WebView/WKWebView，切标签只换视图不重建内核。
+- **每标签引擎池**：`EnginePool` 复用系统内核实例，切标签只换视图不重建内核。
 - **文档驱动**：需求来自 PRD 与附件，阶段进展记录在内部文档中（不随本仓库发布）。
 
 ## 快速开始
