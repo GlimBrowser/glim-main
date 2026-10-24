@@ -127,6 +127,14 @@ class AndroidWebViewEngine(
     private var webView: WebView? = null
     private var listener: BrowserEngine.Listener? = null
 
+    /**
+     * 最近一次已知 URL（**只在主线程写**）。
+     * `shouldInterceptRequest` 跑在 WebView 的后台线程，绝不能在那里调用 WebView.getUrl()，
+     * 否则会抛 "A WebView method was called on thread ..." 直接崩溃（0.0.1-alpha 实测）。
+     */
+    @Volatile
+    private var lastKnownUrl: String = ""
+
     /** 页面滚动 → UI（悬浮底栏下滑隐藏）。 */
     internal fun notifyScroll(scrollY: Int) {
         listener?.onScroll(scrollY)
@@ -176,7 +184,8 @@ class AndroidWebViewEngine(
         override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
             val url = request?.url?.toString() ?: return null
             if (request.isForMainFrame) return null   // 主文档不拦（只拦子资源/广告，PRD §3.3.2 请求级）
-            val pageHost = view?.url?.let { runCatching { java.net.URI(it).host }.getOrNull() } ?: ""
+            // 注意：本方法在后台线程执行，不能调用任何 WebView 方法（含 getUrl）
+            val pageHost = runCatching { java.net.URI(lastKnownUrl).host }.getOrNull() ?: ""
             return if (requestInterceptor?.invoke(url, pageHost) == true) {
                 // 拦截：返回空响应（广告资源不下发）
                 WebResourceResponse("text/plain", "utf-8", "".byteInputStream())
@@ -210,6 +219,7 @@ class AndroidWebViewEngine(
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             super.onPageStarted(view, url, favicon)
+            url?.let { lastKnownUrl = it }
             view?.visibility = android.view.View.VISIBLE   // 重试/新导航时恢复显示
             view?.alpha = 1f
             listener?.onProgress(url ?: "", 0f)
@@ -217,6 +227,7 @@ class AndroidWebViewEngine(
 
         override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
             super.doUpdateVisitedHistory(view, url, isReload)
+            url?.let { lastKnownUrl = it }
             url?.let { listener?.onNavigationStateChanged(it, view?.title, view?.canGoBack() == true, view?.canGoForward() == true) }
         }
 
@@ -257,6 +268,7 @@ class AndroidWebViewEngine(
 
     override fun loadUrl(url: String) {
         if (url == BrowserEngine.HOME_URL) return  // 首页由共享 UI 渲染，容器不加载伪 URL
+        lastKnownUrl = url
         webView?.loadUrl(url)
     }
 
@@ -266,7 +278,7 @@ class AndroidWebViewEngine(
     override fun goForward() { webView?.goForward() }
     override fun reload() { webView?.reload() }
     override fun currentTitle(): String? = webView?.title
-    override fun currentUrl(): String? = webView?.url
+    override fun currentUrl(): String? = lastKnownUrl.takeIf { it.isNotBlank() }
     /** 无痕标志（视图层创建 WebView 时读缓存策略）。 */
     internal val isPrivateEngine: Boolean get() = isPrivate
 
