@@ -102,6 +102,16 @@ private fun CompactShell(
     var lastScrollY by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     // 仓库（书签/历史/插件/设置面板的真实数据源）
     val panelRepository = cn.ac.oac.glimbrowser.ai.localRepository.current
+    // 搜索联想用的 AI 运行时/档案（未配置时为 null → 只用本地历史）
+    val searchAiRuntime = cn.ac.oac.glimbrowser.ai.localAiRuntime.current
+    val searchAiProfile = androidx.compose.runtime.remember(panelRepository, state.aiConfigured, state.apiGuide) {
+        val row = runCatching { panelRepository?.aiProfile("default") }.getOrNull()
+        cn.ac.oac.glimbrowser.ai.resolveAiProfile(state.apiGuide, row)
+    }
+    val searchAiSuggest: (suspend (String) -> List<String>)? =
+        if (searchAiRuntime != null && searchAiProfile != null && state.aiPrefs.enabled) {
+            { q -> runCatching { searchAiRuntime.suggestQueries(searchAiProfile, q, state.aiPrefs) }.getOrElse { emptyList() } }
+        } else null
 
     // 网页深色适配：跟随应用主题（护眼/浅色=浅，深色=深，跟随系统则读系统）
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
@@ -190,6 +200,7 @@ private fun CompactShell(
                     },
                     onClose = { dispatch(BrowserController.Event.CloseSearch) },
                     repository = panelRepository,
+                    aiSuggest = searchAiSuggest,
                     modifier = Modifier.fillMaxSize(),
                 )
                 onHome -> HomeScreen(
@@ -631,6 +642,16 @@ private fun ExpandedShell(
     var lastScrollY by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     // 仓库（书签/历史/插件/设置面板的真实数据源）
     val panelRepository = cn.ac.oac.glimbrowser.ai.localRepository.current
+    // 搜索联想用的 AI 运行时/档案（未配置时为 null → 只用本地历史）
+    val searchAiRuntime = cn.ac.oac.glimbrowser.ai.localAiRuntime.current
+    val searchAiProfile = androidx.compose.runtime.remember(panelRepository, state.aiConfigured, state.apiGuide) {
+        val row = runCatching { panelRepository?.aiProfile("default") }.getOrNull()
+        cn.ac.oac.glimbrowser.ai.resolveAiProfile(state.apiGuide, row)
+    }
+    val searchAiSuggest: (suspend (String) -> List<String>)? =
+        if (searchAiRuntime != null && searchAiProfile != null && state.aiPrefs.enabled) {
+            { q -> runCatching { searchAiRuntime.suggestQueries(searchAiProfile, q, state.aiPrefs) }.getOrElse { emptyList() } }
+        } else null
 
     // 网页深色适配：跟随应用主题（护眼/浅色=浅，深色=深，跟随系统则读系统）
     val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
@@ -807,6 +828,7 @@ private fun ExpandedShell(
                     },
                     onClose = { dispatch(BrowserController.Event.CloseSearch) },
                     repository = panelRepository,
+                    aiSuggest = searchAiSuggest,
                     modifier = Modifier.fillMaxSize(),
                 )
                 onHome -> HomeScreen(

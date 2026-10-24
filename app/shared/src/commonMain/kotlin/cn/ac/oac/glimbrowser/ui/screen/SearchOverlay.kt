@@ -52,11 +52,26 @@ fun SearchOverlay(
     onClose: () -> Unit,
     repository: GlimRepository?,
     modifier: Modifier = Modifier,
+    /** 模型智能联想（为空则只用本地历史）。失败返回空列表即可。 */
+    aiSuggest: (suspend (String) -> List<String>)? = null,
 ) {
     val focus = remember { FocusRequester() }
     val store = remember(repository) { cn.ac.oac.glimbrowser.search.SearchSuggestionStore(repository) }
     var version by remember { mutableStateOf(0) }
     val suggestions = remember(query, version, repository) { store.suggest(query) }
+    var aiList by remember { mutableStateOf<List<String>>(emptyList()) }
+    var aiLoading by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(query, aiSuggest) {
+        val q = query.trim()
+        if (aiSuggest == null || q.length < 2) {
+            aiList = emptyList(); aiLoading = false
+            return@LaunchedEffect
+        }
+        kotlinx.coroutines.delay(350)   // 防抖
+        aiLoading = true
+        aiList = runCatching { aiSuggest(q) }.getOrElse { emptyList() }
+        aiLoading = false
+    }
     // 提交：若是搜索词（非 URL）则记录，供下次联想
     val submit: (String) -> Unit = { raw ->
         val q = raw.trim()
@@ -181,9 +196,29 @@ fun SearchOverlay(
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 14.dp),
         ) {
+            // 模型智能联想
+            if (query.isNotBlank() && aiLoading) {
+                GroupTitle("AI 联想")
+                Text(
+                    "正在生成联想…",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                )
+            } else if (query.isNotBlank() && aiList.isNotEmpty()) {
+                GroupTitle("AI 联想")
+                aiList.forEach { sug ->
+                    SuggestRow(
+                        icon = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SPARKLE,
+                        title = sug,
+                        subtitle = "",
+                        onClick = { submit(sug) },
+                    )
+                }
+            }
             // 本地联想（基于历史搜索的自进化排序）
             if (query.isNotBlank() && suggestions.isNotEmpty()) {
-                GroupTitle("搜索联想")
+                GroupTitle("历史联想")
                 suggestions.forEach { sug ->
                     SuggestRow(
                         icon = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SEARCH,

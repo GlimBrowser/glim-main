@@ -1,5 +1,6 @@
 package cn.ac.oac.glimbrowser.ai
 
+import kotlinx.serialization.json.jsonArray
 import cn.ac.oac.glimbrowser.agent.AgentOrchestrator
 import cn.ac.oac.glimbrowser.agent.AgentResult
 import cn.ac.oac.glimbrowser.agent.AgentSchemas
@@ -158,6 +159,65 @@ class AiRuntime(
                 chat.chatCompletion(effective, req).getOrNull()?.text?.let { emit(it) }
             }
         }
+    }
+
+    /**
+     * 搜索联想（模型智能生成）：
+     * 让模型基于用户当前输入给出若干搜索词，返回本地解析后的字符串列表。
+     * 失败/超时返回空列表（调用方回退到本地历史联想）。
+     */
+    suspend fun suggestQueries(
+        profile: AiProfile,
+        input: String,
+        prefs: cn.ac.oac.glimbrowser.ai.AiPreferences = cn.ac.oac.glimbrowser.ai.AiPreferences(),
+        limit: Int = 6,
+    ): List<String> {
+        val q = input.trim()
+        if (q.isEmpty()) return emptyList()
+        val effective = profile.copy(
+            timeoutSeconds = prefs.timeoutSeconds,
+            extraHeaders = profile.extraHeaders + prefs.parsedHeaders(),
+        )
+        val prompt = "用户正在搜索框输入：「$q」。请给出 $limit 条最可能的搜索词补全，" +
+            "要求：与输入相关、简短、中文优先、不要解释。只输出 JSON 字符串数组，例如 [\"a\",\"b\"]"
+        val text = runCatching {
+            chat.chatCompletion(
+                effective,
+                cn.ac.oac.glimbrowser.network.ChatRequest(
+                    model = effective.model,
+                    messages = listOf(
+                        cn.ac.oac.glimbrowser.network.ChatMessage(
+                            cn.ac.oac.glimbrowser.network.ChatMessage.ROLE_SYSTEM,
+                            "你是搜索联想引擎，只输出 JSON 字符串数组。",
+                        ),
+                        cn.ac.oac.glimbrowser.network.ChatMessage.userWithFencedDocument(prompt),
+                    ),
+                    responseFormat = null,
+                    stream = false,
+                    temperature = 0.4,
+                    maxTokens = 200,
+                ),
+            ).getOrNull()?.text
+        }.getOrNull() ?: return emptyList()
+
+        return runCatching<List<String>> {
+            val root = kotlinx.serialization.json.Json.parseToJsonElement(extractJsonArray(text))
+            val arr = root.jsonArray
+            arr.mapNotNull { el: kotlinx.serialization.json.JsonElement ->
+                (el as? kotlinx.serialization.json.JsonPrimitive)?.content
+            }
+                .map { it.trim() }
+                .filter { it.isNotBlank() && it.length <= 40 && !it.equals(q, ignoreCase = true) }
+                .distinct()
+                .take(limit)
+        }.getOrElse { emptyList() }
+    }
+
+    /** 从模型输出中取出第一个 JSON 数组（容忍 ```json 围栏与前后废话）。 */
+    private fun extractJsonArray(text: String): String {
+        val start = text.indexOf('[')
+        val end = text.lastIndexOf(']')
+        return if (start in 0 until end) text.substring(start, end + 1) else "[]"
     }
 
     /** 连通性测试（已保存档案；AI 设置页使用）。 */

@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -80,11 +82,26 @@ fun AiDrawerHost(
         }
     }
 
-    Box(
-        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)).clickable(onClick = onClose),
-    )
-    Box(modifier = Modifier.fillMaxSize().padding(top = 150.dp), contentAlignment = Alignment.BottomCenter) {
+    Box(modifier = modifier.fillMaxSize()) {
+        // 遮罩（点击关闭）
+        Box(
+            modifier = Modifier.fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f))
+                .clickable(onClick = onClose),
+        )
+        // 底部面板：独立 Surface（实底 + 圆角），显式对齐，避免只画出遮罩
+        androidx.compose.material3.Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .heightIn(max = 620.dp)
+                .zIndex(2f),
+            color = MaterialTheme.colorScheme.surface,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+            shadowElevation = 16.dp,
+        ) {
         if (!prefs.enabled || (prefs.disableInIncognito && incognito)) {
+            // 关闭态
             Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
                 androidx.compose.foundation.layout.Column {
                     androidx.compose.material3.Text(
@@ -102,15 +119,12 @@ fun AiDrawerHost(
                     cn.ac.oac.glimbrowser.ui.design.GlimButton("打开 AI 设置", onRequestAiSettings, small = true)
                 }
             }
-            return@Box
-        }
-        if (profile == null || runtime == null) {
+        } else if (profile == null || runtime == null) {
             // 未配置：引导（真实入口，不展示假数据）
             Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
                 cn.ac.oac.glimbrowser.ui.screen.ApiGuideHint(onStart = onRequestGuide, onClose = onClose)
             }
-            return@Box
-        }
+        } else {
         AiDrawerSheet(
             state = panel,
             summary = summary,
@@ -205,9 +219,11 @@ fun AiDrawerHost(
                     }
                 }
             },
-            onClose = onClose,
-            modifier = Modifier.fillMaxWidth(),
-        )
+                onClose = onClose,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        }
     }
 }
 
