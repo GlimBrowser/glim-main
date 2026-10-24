@@ -271,7 +271,7 @@ private fun CompactShell(
             // 地址栏聚焦编辑态（Phase 2 简化：覆盖一层输入提示；Phase 3 接真实输入框 + 建议列表）
 
             // 三步引导（真实测试连接）
-            if (state.apiGuideVisible) {
+            if (state.apiGuideVisible && state.subPage == null) {
                 cn.ac.oac.glimbrowser.ui.screen.ApiGuideHost(
                     state = state.apiGuide,
                     runtime = cn.ac.oac.glimbrowser.ai.localAiRuntime.current,
@@ -893,7 +893,7 @@ private fun ExpandedShell(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            if (state.apiGuideVisible) {
+            if (state.apiGuideVisible && state.subPage == null) {
                 cn.ac.oac.glimbrowser.ui.screen.ApiGuideHost(
                     state = state.apiGuide,
                     runtime = cn.ac.oac.glimbrowser.ai.localAiRuntime.current,

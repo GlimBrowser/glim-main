@@ -143,6 +143,17 @@ fun SubPageHost(
             )
             SubPage.ABOUT -> AboutPage(onBack = { dispatch(BrowserController.Event.CloseSubPage) })
         }
+        // AI 引导必须画在子页面 Dialog 的**同一个窗口**里，否则会被设置页 Dialog 盖住
+        // （现象：点「去配置」没反应，关掉设置后才看到引导）。
+        if (state.apiGuideVisible) {
+            ApiGuideHost(
+                state = state.apiGuide,
+                runtime = aiRuntime,
+                onEvent = { dispatch(BrowserController.Event.ApiGuide(it)) },
+                onClose = { dispatch(BrowserController.Event.CloseApiGuide) },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
     }
 }
