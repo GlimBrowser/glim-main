@@ -34,6 +34,7 @@ jobs:
       - name: 校验 SPLIT_TOKEN
         env:
           TOKEN: ${{ secrets.SPLIT_TOKEN }}
+          ORG: ${{ vars.SPLIT_ORG || 'GlimBrowser' }}
         run: |
           set -euo pipefail
           if [ -z "${TOKEN:-}" ]; then
@@ -49,18 +50,16 @@ jobs:
           fi
           echo "token 身份：$(python3 -c 'import json;print(json.load(open("/tmp/user.json"))["login"])')"
           # 检查能否看到组织仓库（403/404 常见于 SSO 未授权或权限不足）
-          org="${ORG:-GlimBrowser}"
-          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" "https://api.github.com/repos/${org}/${GITHUB_EVENT_REPO_NAME:-glim-network}")
-          echo "探测 ${org}/glim-network 可见性：HTTP $code"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" "https://api.github.com/repos/${ORG}/glim-network")
+          echo "探测 ${ORG}/glim-network 可见性：HTTP $code"
           if [ "$code" = "403" ] || [ "$code" = "404" ]; then
-            echo "::warning::token 看不到 ${org} 的仓库：请确认 scope 含 repo、细粒度权限含 Contents:write，且已完成 SSO 授权"
+            echo "::warning::token 看不到 ${ORG} 的仓库：请确认 scope 含 repo、细粒度权限含 Contents:write，且已完成 SSO 授权"
           fi
-        env:
-          ORG: ${{ vars.SPLIT_ORG || 'GlimBrowser' }}
 
       - name: 配置 git 凭证（用 PAT，不用 github-actions[bot]）
         env:
           TOKEN: ${{ secrets.SPLIT_TOKEN }}
+          ORG: ${{ vars.SPLIT_ORG || 'GlimBrowser' }}
         run: |
           set -euo pipefail
           # 覆盖 checkouts 默认的 credentials helper，确保 push 用的是 PAT
@@ -70,12 +69,10 @@ jobs:
           chmod 600 ~/.git-credentials
           git config --global user.name  "glimbrowser-bot"
           git config --global user.email "bot@users.noreply.github.com"
-          # 自检：能否列出组织仓库
-          git ls-remote "https://github.com/${ORG:-GlimBrowser}/glim-network.git" >/dev/null 2>&1 \
+          # 自检：能否访问组织仓库
+          git ls-remote "https://github.com/${ORG}/glim-network.git" >/dev/null 2>&1 \
             && echo "凭证自检通过" \
             || echo "::warning::ls-remote 自检失败（仓库可能尚未创建），继续尝试推送"
-        env:
-          ORG: ${{ vars.SPLIT_ORG || 'GlimBrowser' }}
 
       - name: 逐个拆分并推送
         env:
