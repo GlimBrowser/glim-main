@@ -93,7 +93,7 @@ SPLIT_ORG=GlimBrowser SPLIT_DRY_RUN=1 ./scripts/split-repos.sh --push
 
 | Secret | 说明 |
 |---|---|
-| `SPLIT_TOKEN` | 有 `repo` 权限的 PAT（用于推送到各子仓库） |
+| `SPLIT_TOKEN` | 有权限推送到组织子仓库的 token：经典 PAT 勾选 `repo`；细粒度 PAT 对组织全部仓库授予 **Contents: Read and write**；若组织启用 SAML SSO，需再点 **Configure SSO** 授权 |
 | `SPLIT_ORG`（变量） | 你的 GitHub 组织或用户名 |
 
 > 若使用 SSH，可改成 deploy key；工作流里默认用 `https://x-access-token:$SPLIT_TOKEN@github.com/GlimBrowser/<repo>.git`。

@@ -1,9 +1,14 @@
 name: Split sub-repositories
 
 # 把 monorepo 的子目录拆分为独立仓库并推送。
-# 仓库位于 GitHub 组织 GlimBrowser（https://github.com/GlimBrowser）
-# 需要 Secrets: SPLIT_TOKEN（有 repo 权限的 PAT，需可推送到该组织下的子仓库）
-#      Variables: SPLIT_ORG（可选，默认 GlimBrowser）
+#
+# 需要仓库 Secrets:
+#   SPLIT_TOKEN —— 有权限推送到 GlimBrowser/* 子仓库的 token
+#                  经典 PAT：勾选 `repo`
+#                  细粒度 PAT：对 GlimBrowser 组织全部仓库授予 Contents: Read and write
+#                  （若组织启用了 SAML SSO，必须再点 "Configure SSO" 授权该 token）
+# Variables（可选）:
+#   SPLIT_ORG —— 默认 GlimBrowser
 on:
   push:
     branches: [ main ]
@@ -13,34 +18,97 @@ concurrency:
   group: split-repos
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   split:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout（需要完整历史，subtree split 依赖）
+      - name: Checkout（完整历史；不持久化 GITHUB_TOKEN，避免覆盖 PAT）
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: 读取子仓库清单
-        id: repos
+      - name: 校验 SPLIT_TOKEN
+        env:
+          TOKEN: ${{ secrets.SPLIT_TOKEN }}
         run: |
-          echo "list<<EOF" >> "$GITHUB_OUTPUT"
-          grep -v '^\s*#' scripts/repos.conf | grep -v '^\s*$' >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [ -z "${TOKEN:-}" ]; then
+            echo "::error::缺少 SPLIT_TOKEN secret（Settings → Secrets and variables → Actions）"
+            echo "需要的权限：经典 PAT 勾选 repo；细粒度 PAT 对组织仓库授予 Contents: Read and write"
+            exit 1
+          fi
+          # 用 token 调一次 API，确认身份与 scope
+          code=$(curl -s -o /tmp/user.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" https://api.github.com/user)
+          if [ "$code" != "200" ]; then
+            echo "::error::SPLIT_TOKEN 无效或已过期（HTTP $code）"
+            exit 1
+          fi
+          echo "token 身份：$(python3 -c 'import json;print(json.load(open("/tmp/user.json"))["login"])')"
+          # 检查能否看到组织仓库（403/404 常见于 SSO 未授权或权限不足）
+          org="${ORG:-GlimBrowser}"
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" "https://api.github.com/repos/${org}/${GITHUB_EVENT_REPO_NAME:-glim-network}")
+          echo "探测 ${org}/glim-network 可见性：HTTP $code"
+          if [ "$code" = "403" ] || [ "$code" = "404" ]; then
+            echo "::warning::token 看不到 ${org} 的仓库：请确认 scope 含 repo、细粒度权限含 Contents:write，且已完成 SSO 授权"
+          fi
+        env:
+          ORG: ${{ vars.SPLIT_ORG || 'GlimBrowser' }}
+
+      - name: 配置 git 凭证（用 PAT，不用 github-actions[bot]）
+        env:
+          TOKEN: ${{ secrets.SPLIT_TOKEN }}
+        run: |
+          set -euo pipefail
+          # 覆盖 checkouts 默认的 credentials helper，确保 push 用的是 PAT
+          git config --global --unset-all credential.helper || true
+          git config --global credential.helper store
+          printf 'https://x-access-token:%s@github.com\n' "$TOKEN" > ~/.git-credentials
+          chmod 600 ~/.git-credentials
+          git config --global user.name  "glimbrowser-bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          # 自检：能否列出组织仓库
+          git ls-remote "https://github.com/${ORG:-GlimBrowser}/glim-network.git" >/dev/null 2>&1 \
+            && echo "凭证自检通过" \
+            || echo "::warning::ls-remote 自检失败（仓库可能尚未创建），继续尝试推送"
+        env:
+          ORG: ${{ vars.SPLIT_ORG || 'GlimBrowser' }}
 
       - name: 逐个拆分并推送
         env:
-          TOKEN: ${{ secrets.SPLIT_TOKEN }}
           ORG: ${{ vars.SPLIT_ORG || 'GlimBrowser' }}
         run: |
           set -euo pipefail
-          git config user.name  "glimbrowser-bot"
-          git config user.email "bot@users.noreply.github.com"
-          echo "${{ steps.repos.outputs.list }}" | while IFS='|' read -r path repo desc; do
+          failed=0
+          while IFS='|' read -r path repo desc; do
             [ -z "${path// }" ] && continue
+            case "$path" in \#*) continue ;; esac
             echo "::group::$path → $repo"
-            git subtree split --prefix="$path" -b "split/$repo"
-            git push --force "https://x-access-token:${TOKEN}@github.com/${ORG}/${repo}.git" "split/$repo:main"
+            git branch -D "split/$repo" >/dev/null 2>&1 || true
+            if ! git subtree split --prefix="$path" -b "split/$repo" >/dev/null 2>&1; then
+              echo "::warning::拆分失败：$path"
+              failed=$((failed+1)); echo "::endgroup::"; continue
+            fi
+            # 附加许可证（幂等）
+            tmp="$(mktemp -d)"
+            git worktree add -q "$tmp" "split/$repo"
+            if [ ! -f "$tmp/LICENSE" ]; then
+              cp LICENSE NOTICE "$tmp"/ 2>/dev/null || true
+              git -C "$tmp" add LICENSE NOTICE 2>/dev/null || true
+              git -C "$tmp" commit -q -m "chore: 继承根仓库许可证（GlimBrowser Non-Commercial 1.0）" || true
+            fi
+            git worktree remove "$tmp" --force || true
+
+            if git push --force "https://github.com/${ORG}/${repo}.git" "split/$repo:main"; then
+              echo "✅ $repo"
+            else
+              echo "::error::$repo 推送失败（检查 SPLIT_TOKEN 权限 / SSO 授权 / 仓库是否存在）"
+              failed=$((failed+1))
+            fi
             echo "::endgroup::"
-          done
+          done < scripts/repos.conf
+          echo "失败数量：$failed"
+          [ "$failed" -eq 0 ]
