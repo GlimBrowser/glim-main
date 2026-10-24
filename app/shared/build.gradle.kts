@@ -66,6 +66,8 @@ kotlin {
             implementation(libs.ktor.clientCio)
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
+            // TLS：OkHttp 走平台宿主名校验（CIO 在 Android 上会触发 checkServerTrusted 错误）
+            implementation(libs.ktor.clientOkhttp)
         }
         commonMain.dependencies {
             api(project(":core"))
