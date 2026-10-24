@@ -21,6 +21,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +54,21 @@ fun SearchOverlay(
     modifier: Modifier = Modifier,
 ) {
     val focus = remember { FocusRequester() }
+    val store = remember(repository) { cn.ac.oac.glimbrowser.search.SearchSuggestionStore(repository) }
+    var version by remember { mutableStateOf(0) }
+    val suggestions = remember(query, version, repository) { store.suggest(query) }
+    // 提交：若是搜索词（非 URL）则记录，供下次联想
+    val submit: (String) -> Unit = { raw ->
+        val q = raw.trim()
+        if (q.isNotEmpty()) {
+            val r = cn.ac.oac.glimbrowser.logic.resolveAddressBarInput(q)
+            if (r.intent == cn.ac.oac.glimbrowser.logic.AddressBarIntent.SEARCH) {
+                store.record(q)
+                version++
+            }
+            onSubmit(q)
+        }
+    }
     val recent = remember(repository) {
         runCatching { repository?.recentHistory(8).orEmpty().map { it.url to it.title }.distinctBy { it.first } }
             .getOrElse { emptyList() }
@@ -126,7 +144,7 @@ fun SearchOverlay(
                         if (query.isBlank()) MaterialTheme.colorScheme.surfaceVariant
                         else MaterialTheme.colorScheme.primary,
                     )
-                    .clickable(enabled = query.isNotBlank()) { onSubmit(query) },
+                    .clickable(enabled = query.isNotBlank()) { submit(query) },
                 contentAlignment = Alignment.Center,
             ) {
                 cn.ac.oac.glimbrowser.ui.design.GlimIcon(
@@ -163,14 +181,26 @@ fun SearchOverlay(
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 14.dp),
         ) {
-            if (recent.isNotEmpty()) {
+            // 本地联想（基于历史搜索的自进化排序）
+            if (query.isNotBlank() && suggestions.isNotEmpty()) {
+                GroupTitle("搜索联想")
+                suggestions.forEach { sug ->
+                    SuggestRow(
+                        icon = cn.ac.oac.glimbrowser.ui.design.GlimIconName.SEARCH,
+                        title = sug,
+                        subtitle = "",
+                        onClick = { submit(sug) },
+                    )
+                }
+            }
+            if (query.isBlank() && recent.isNotEmpty()) {
                 GroupTitle("最近访问")
                 recent.forEach { (url, title) ->
                     SuggestRow(
                         icon = cn.ac.oac.glimbrowser.ui.design.GlimIconName.CLOCK,
                         title = title.ifBlank { url },
                         subtitle = url,
-                        onClick = { onSubmit(url) },
+                        onClick = { submit(url) },
                     )
                 }
             }
@@ -181,7 +211,7 @@ fun SearchOverlay(
                     letter = name.take(1),
                     title = name,
                     subtitle = url,
-                    onClick = { onSubmit(url) },
+                    onClick = { submit(url) },
                 )
             }
             Spacer(Modifier.height(30.dp))

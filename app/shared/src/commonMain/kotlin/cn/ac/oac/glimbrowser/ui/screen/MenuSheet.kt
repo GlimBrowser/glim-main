@@ -120,7 +120,7 @@ fun MenuSheet(
 
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "GlimBrowser 0.0.1-alpha.4 · 轻量浏览 · 本地优先",
+            text = "GlimBrowser 0.0.1-alpha.5 · 轻量浏览 · 本地优先",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.align(Alignment.CenterHorizontally),

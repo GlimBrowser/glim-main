@@ -52,7 +52,10 @@ fun PageScaffold(
             Spacer(modifier = Modifier.weight(1f))
             action?.invoke()
         }
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), content = content)
+        Column(
+            modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 16.dp),
+            content = content,
+        )
     }
 }
 
