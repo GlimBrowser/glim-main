@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -849,6 +850,15 @@ private fun ExpandedShell(
                     },
                 )
             }
+        }
+
+        // AI 右侧停靠（PRD §3.5.1 Expanded / 原型 ai-dock；点击进真实 AI 抽屉）
+            if (layout.aiPanelPresentation == AiPanelPresentation.DOCKED_SIDE) {
+                AiDock(onOpen = { dispatch(BrowserController.Event.AiEntry) }, modifier = Modifier.fillMaxHeight().width(270.dp))
+            }
+            }
+        }
+        // ---- 浮层（覆盖整个桌面外壳，而不是横排在 Row 里）----
             if (state.addressBarFocused) {
                 AddressBarEditorOverlay(
                     input = state.addressBarInput,
@@ -881,7 +891,7 @@ private fun ExpandedShell(
                         onToggleSite = { host, enable ->
                             dispatch(if (enable) BrowserController.Event.ResumeSiteFilter else BrowserController.Event.PauseSiteFilter)
                         },
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.widthIn(max = 520.dp).fillMaxWidth(0.46f),
                     )
                 }
             }
@@ -914,19 +924,11 @@ private fun ExpandedShell(
                             }
                         },
                         onIncognitoToggle = { dispatch(BrowserController.Event.SetIncognito(it)) },
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth(0.42f),
                     )
                 }
             }
-        }
 
-        // AI 右侧停靠（PRD §3.5.1 Expanded / 原型 ai-dock；点击进真实 AI 抽屉）
-            if (layout.aiPanelPresentation == AiPanelPresentation.DOCKED_SIDE) {
-                AiDock(onOpen = { dispatch(BrowserController.Event.AiEntry) }, modifier = Modifier.fillMaxHeight().width(270.dp))
-            }
-            }
-        }
-        // ---- 浮层（覆盖整个桌面外壳，而不是横排在 Row 里）----
         // 页内查找条（真实命中数）
         if (state.findOpen) {
             cn.ac.oac.glimbrowser.ui.screen.FindInPageBar(
