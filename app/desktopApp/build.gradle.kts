@@ -21,8 +21,8 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "cn.ac.oac.glimbrowser"
-            packageVersion = "0.0.1"
+            packageName = "GlimBrowser"
+            packageVersion = "1.0.0"
             description = "GlimBrowser"
             vendor = "GlimBrowser"
 
