@@ -710,75 +710,18 @@ private fun ExpandedShell(
         }
     }
 
-    Row(modifier = modifier.fillMaxSize()) {
-        // 左导航图标轨（PRD §3.5.1：可折叠为图标轨）
-                // 浮动标签条（Safari 风格；手机仅当前标签，桌面/Pad 全量）
-        cn.ac.oac.glimbrowser.ui.design.FloatingTabStrip(
-            tabs = state.tabs.tabs,
-            currentTabId = state.tabs.currentTabId,
-            onSelect = { dispatch(BrowserController.Event.SelectTab(it)) },
-            onClose = { dispatch(BrowserController.Event.CloseTab(it)) },
-            onNewTab = { dispatch(BrowserController.Event.NewTab) },
-            compact = false,
-        )
-
-        // 页内查找条（真实命中数）
-        if (state.findOpen) {
-            cn.ac.oac.glimbrowser.ui.screen.FindInPageBar(
-                query = state.findQuery,
-                matches = state.findMatches,
-                index = state.findIndex,
-                onQueryChange = { q ->
-                    dispatch(BrowserController.Event.SetFindQuery(q))
-                    pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true)?.findInPage(q)
-                },
-                onPrev = {
-                    pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true)?.let { e ->
-                        e.findInPage(state.findQuery)
-                    }
-                },
-                onNext = { pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true)?.findNext() },
-                onClose = {
-                    pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true)?.clearFind()
-                    dispatch(BrowserController.Event.CloseFind)
-                },
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // 顶部浮动标签条（全宽）
+            cn.ac.oac.glimbrowser.ui.design.FloatingTabStrip(
+                tabs = state.tabs.tabs,
+                currentTabId = state.tabs.currentTabId,
+                onSelect = { dispatch(BrowserController.Event.SelectTab(it)) },
+                onClose = { dispatch(BrowserController.Event.CloseTab(it)) },
+                onNewTab = { dispatch(BrowserController.Event.NewTab) },
+                compact = false,
             )
-        }
-
-        // 全屏子页面（书签/历史/下载/插件/设置/关于）
-        val subProfile = cn.ac.oac.glimbrowser.ai.resolveAiProfile(
-            state.apiGuide,
-            runCatching { panelRepository?.aiProfile("default") }.getOrNull(),
-        )
-        cn.ac.oac.glimbrowser.ui.screen.SubPageHost(
-            state = state,
-            dispatch = dispatch,
-            repository = panelRepository,
-            adFilter = state.adFilter,
-            profile = subProfile,
-            onOpenUrl = { url ->
-                dispatch(BrowserController.Event.CloseSubPage)
-                dispatch(BrowserController.Event.OpenUrlInNewTab(url))
-            },
-            nowMs = { kotlin.time.TimeSource.Monotonic.markNow().elapsedNow().inWholeMilliseconds },
-        )
-
-        // AI 抽屉（真实 BYOK 链路；未配置→三步引导）
-        cn.ac.oac.glimbrowser.ui.screen.AiDrawerHost(
-            visible = state.aiDrawerOpen,
-            runtime = cn.ac.oac.glimbrowser.ai.localAiRuntime.current,
-            repository = panelRepository,
-            guide = state.apiGuide,
-            engine = pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true),
-            onRequestGuide = { dispatch(BrowserController.Event.AiEntry) },
-            onRequestAiSettings = {
-                dispatch(BrowserController.Event.OpenSubPage(cn.ac.oac.glimbrowser.logic.SubPage.AI_SETTINGS))
-            },
-            prefs = state.aiPrefs,
-            incognito = state.tabs.incognito,
-            pageUrl = state.currentTab?.url,
-            onClose = { dispatch(BrowserController.Event.ToggleAiDrawer(false)) },
-        )
+            Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
 
             NavigationRail(
                 current = state.navDestination,
@@ -978,11 +921,73 @@ private fun ExpandedShell(
         }
 
         // AI 右侧停靠（PRD §3.5.1 Expanded / 原型 ai-dock；点击进真实 AI 抽屉）
-        if (layout.aiPanelPresentation == AiPanelPresentation.DOCKED_SIDE) {
-            AiDock(onOpen = { dispatch(BrowserController.Event.AiEntry) }, modifier = Modifier.fillMaxHeight().width(270.dp))
+            if (layout.aiPanelPresentation == AiPanelPresentation.DOCKED_SIDE) {
+                AiDock(onOpen = { dispatch(BrowserController.Event.AiEntry) }, modifier = Modifier.fillMaxHeight().width(270.dp))
+            }
+            }
         }
+        // ---- 浮层（覆盖整个桌面外壳，而不是横排在 Row 里）----
+        // 页内查找条（真实命中数）
+        if (state.findOpen) {
+            cn.ac.oac.glimbrowser.ui.screen.FindInPageBar(
+                query = state.findQuery,
+                matches = state.findMatches,
+                index = state.findIndex,
+                onQueryChange = { q ->
+                    dispatch(BrowserController.Event.SetFindQuery(q))
+                    pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true)?.findInPage(q)
+                },
+                onPrev = {
+                    pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true)?.let { e ->
+                        e.findInPage(state.findQuery)
+                    }
+                },
+                onNext = { pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true)?.findNext() },
+                onClose = {
+                    pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true)?.clearFind()
+                    dispatch(BrowserController.Event.CloseFind)
+                },
+            )
+        }
+
+        // 全屏子页面（书签/历史/下载/插件/设置/关于）
+        val subProfile = cn.ac.oac.glimbrowser.ai.resolveAiProfile(
+            state.apiGuide,
+            runCatching { panelRepository?.aiProfile("default") }.getOrNull(),
+        )
+        cn.ac.oac.glimbrowser.ui.screen.SubPageHost(
+            state = state,
+            dispatch = dispatch,
+            repository = panelRepository,
+            adFilter = state.adFilter,
+            profile = subProfile,
+            onOpenUrl = { url ->
+                dispatch(BrowserController.Event.CloseSubPage)
+                dispatch(BrowserController.Event.OpenUrlInNewTab(url))
+            },
+            nowMs = { kotlin.time.TimeSource.Monotonic.markNow().elapsedNow().inWholeMilliseconds },
+        )
+
+        // AI 抽屉（真实 BYOK 链路；未配置→三步引导）
+        cn.ac.oac.glimbrowser.ui.screen.AiDrawerHost(
+            visible = state.aiDrawerOpen,
+            runtime = cn.ac.oac.glimbrowser.ai.localAiRuntime.current,
+            repository = panelRepository,
+            guide = state.apiGuide,
+            engine = pool.engineFor(state.tabs.currentTabId, state.currentTab?.isPrivate == true),
+            onRequestGuide = { dispatch(BrowserController.Event.AiEntry) },
+            onRequestAiSettings = {
+                dispatch(BrowserController.Event.OpenSubPage(cn.ac.oac.glimbrowser.logic.SubPage.AI_SETTINGS))
+            },
+            prefs = state.aiPrefs,
+            incognito = state.tabs.incognito,
+            pageUrl = state.currentTab?.url,
+            onClose = { dispatch(BrowserController.Event.ToggleAiDrawer(false)) },
+        )
+
     }
 }
+
 
 /** 左导航图标轨（Expanded，PRD §3.5.1）。 */
 @Composable
