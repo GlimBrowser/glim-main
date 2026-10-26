@@ -136,6 +136,12 @@ kotlin {
             implementation("org.openjfx:javafx-media:$fxVersion:$fxClassifier")
             implementation("org.openjfx:javafx-web:$fxVersion:$fxClassifier")
             implementation("org.openjfx:javafx-swing:$fxVersion:$fxClassifier")
+            // Chromium（JCEF）：桌面网页内核
+            implementation("me.friwi:jcefmaven:132.3.1") {
+                // 桌面窗口模式不需要 JOGL 离屏渲染；该 jar 体积大且下载经常失败
+                exclude(group = "me.friwi", module = "jogl-all")
+                exclude(group = "me.friwi", module = "gluegen-rt")
+            }
         }
         jsMain.dependencies {
             implementation(libs.ktor.clientJs)
