@@ -66,6 +66,9 @@ data class BrowserState(
     /** 强制深色网页（实验，页面无深色样式时反转）；持久化。 */
     val forceDarkWeb: Boolean = false,
 
+    /** 网页全屏（隐藏侧栏/中面板/AI 停靠/标签条，专注网页）。 */
+    val webFullscreen: Boolean = false,
+
     /** 全屏搜索视图（原型 view-search；无"取消"文案，靠下拉/返回退出）。 */
     val searchOpen: Boolean = false,
     val searchQuery: String = "",
@@ -298,6 +301,13 @@ class BrowserActions(
             apiGuideVisible = true,
             aiDrawerOpen = false,
         )
+
+    /** 切换网页全屏。 */
+    fun toggleWebFullscreen(state: BrowserState): BrowserState =
+        state.copy(webFullscreen = !state.webFullscreen)
+
+    /** 关闭网页全屏。 */
+    fun exitWebFullscreen(state: BrowserState): BrowserState = state.copy(webFullscreen = false)
 
     /** 打开搜索视图（清空上次输入）。 */
     fun openSearch(state: BrowserState): BrowserState = state.copy(searchOpen = true, searchQuery = "")

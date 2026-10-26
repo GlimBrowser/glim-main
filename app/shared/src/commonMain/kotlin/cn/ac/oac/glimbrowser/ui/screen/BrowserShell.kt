@@ -335,6 +335,7 @@ private fun CompactShell(
                                 }
                                 "open_system" -> dispatch(BrowserController.Event.OpenInSystemBrowser)
                                 "clear_cache" -> dispatch(BrowserController.Event.ClearCache)
+                                "fullscreen" -> dispatch(BrowserController.Event.ToggleWebFullscreen)
                                 "new_tab" -> dispatch(BrowserController.Event.NewTab)
                                 "incognito" -> { dispatch(BrowserController.Event.SetIncognito(true)); dispatch(BrowserController.Event.NewTab) }
                                 else -> onMenuItemClick(item)
@@ -413,6 +414,8 @@ private fun CompactShell(
             }
         }
 
+        // 网页全屏时隐藏底栏（专注内容）
+        if (!state.webFullscreen) {
         // 悬浮底栏（下滑隐藏 / 上滑显现；内容不再被硬性占位）
         val barOffset by androidx.compose.animation.core.animateDpAsState(
             targetValue = if (barVisible || onHome) 0.dp else 120.dp,
@@ -426,6 +429,16 @@ private fun CompactShell(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 10.dp)
                 .offset(y = barOffset),
         )
+        }
+        if (state.webFullscreen) {
+            Box(
+                modifier = Modifier.align(Alignment.End).padding(10.dp)
+                    .clip(GlimTokens.RadiusPill)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+                    .clickable { dispatch(BrowserController.Event.ExitWebFullscreen) }
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+            ) { Text("退出全屏", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+        }
     }
 }
 
@@ -713,25 +726,27 @@ private fun ExpandedShell(
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 顶部浮动标签条（全宽）
-            cn.ac.oac.glimbrowser.ui.design.FloatingTabStrip(
-                tabs = state.tabs.tabs,
-                currentTabId = state.tabs.currentTabId,
-                onSelect = { dispatch(BrowserController.Event.SelectTab(it)) },
-                onClose = { dispatch(BrowserController.Event.CloseTab(it)) },
-                onNewTab = { dispatch(BrowserController.Event.NewTab) },
-                compact = false,
-            )
+            // 顶部浮动标签条（全宽；网页全屏时隐藏）
+            if (!state.webFullscreen) {
+                cn.ac.oac.glimbrowser.ui.design.FloatingTabStrip(
+                    tabs = state.tabs.tabs,
+                    currentTabId = state.tabs.currentTabId,
+                    onSelect = { dispatch(BrowserController.Event.SelectTab(it)) },
+                    onClose = { dispatch(BrowserController.Event.CloseTab(it)) },
+                    onNewTab = { dispatch(BrowserController.Event.NewTab) },
+                    compact = false,
+                )
+            }
             Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
 
-            NavigationRail(
+            if (!state.webFullscreen) NavigationRail(
                 current = state.navDestination,
                 onSelect = { dispatch(BrowserController.Event.Navigate(it)) },
                 modifier = Modifier.fillMaxHeight().width(if (layout.showNavigationRail) 188.dp else 0.dp),
         )
 
         // 中面板栏（标签列表，PRD §3.5.1：宽度可拖拽 280–480dp；Phase 2 固定默认宽）
-        if (layout.showPanelColumn) {
+        if (!state.webFullscreen && layout.showPanelColumn) {
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
@@ -853,11 +868,33 @@ private fun ExpandedShell(
         }
 
         // AI 右侧停靠（PRD §3.5.1 Expanded / 原型 ai-dock；点击进真实 AI 抽屉）
-            if (layout.aiPanelPresentation == AiPanelPresentation.DOCKED_SIDE) {
+            if (!state.webFullscreen && layout.aiPanelPresentation == AiPanelPresentation.DOCKED_SIDE) {
                 AiDock(onOpen = { dispatch(BrowserController.Event.AiEntry) }, modifier = Modifier.fillMaxHeight().width(270.dp))
             }
             }
         }
+        if (state.webFullscreen) {
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+                    .clip(GlimTokens.RadiusPill)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
+                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), GlimTokens.RadiusPill)
+                    .clickable { dispatch(BrowserController.Event.ExitWebFullscreen) }
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                cn.ac.oac.glimbrowser.ui.design.GlimIcon(
+                    cn.ac.oac.glimbrowser.ui.design.GlimIconName.CLOSE,
+                    size = 13.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(6.dp))
+                Text("退出全屏", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
         // ---- 浮层（覆盖整个桌面外壳，而不是横排在 Row 里）----
             if (state.addressBarFocused) {
                 AddressBarEditorOverlay(
@@ -918,6 +955,7 @@ private fun ExpandedShell(
                                 }
                                 "open_system" -> dispatch(BrowserController.Event.OpenInSystemBrowser)
                                 "clear_cache" -> dispatch(BrowserController.Event.ClearCache)
+                                "fullscreen" -> dispatch(BrowserController.Event.ToggleWebFullscreen)
                                 "new_tab" -> dispatch(BrowserController.Event.NewTab)
                                 "incognito" -> { dispatch(BrowserController.Event.SetIncognito(true)); dispatch(BrowserController.Event.NewTab) }
                                 else -> onMenuItemClick(item)
@@ -1097,6 +1135,7 @@ val DefaultMenuEntries: List<MenuItem> = listOf(
     MenuItem("desktop_mode", "桌面版网站", "切换电脑版页面", MenuItemIcon.DESKTOP_MODE),
     MenuItem("open_system", "用系统浏览器打开", "交给系统默认浏览器", MenuItemIcon.SETTINGS),
     MenuItem("clear_cache", "清除缓存", "清除页面缓存与 Cookie", MenuItemIcon.SETTINGS),
+    MenuItem("fullscreen", "网页全屏", "隐藏侧栏与标签条", MenuItemIcon.DESKTOP_MODE),
     MenuItem("new_tab", "新标签", "", MenuItemIcon.NEW_TAB),
     MenuItem("incognito", "无痕新标签", "不记录历史与缓存", MenuItemIcon.INCOGNITO),
 )

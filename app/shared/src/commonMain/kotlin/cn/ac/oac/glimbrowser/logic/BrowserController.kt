@@ -341,6 +341,15 @@ class BrowserController(
             override fun reduce(actions: BrowserActions, state: BrowserState) = state
         }
 
+        /** 切换网页全屏（隐藏侧栏/标签条，专注内容）。 */
+        data object ToggleWebFullscreen : Event {
+            override fun reduce(actions: BrowserActions, state: BrowserState) = actions.toggleWebFullscreen(state)
+        }
+
+        data object ExitWebFullscreen : Event {
+            override fun reduce(actions: BrowserActions, state: BrowserState) = actions.exitWebFullscreen(state)
+        }
+
         /** 打开/关闭全屏搜索视图。 */
         data object OpenSearch : Event {
             override fun reduce(actions: BrowserActions, state: BrowserState) = actions.openSearch(state)
