@@ -35,6 +35,6 @@ private fun desktopMain() = application {
         title = "GlimBrowser",
         icon = icon,
     ) {
-        App()
+        App(initialUrl = System.getenv("GLIM_START_URL"))
     }
 }

@@ -27,7 +27,7 @@ import cn.ac.oac.glimbrowser.ui.theme.GlimTheme
  * 时钟为占位固定值；Phase 3 接平台时钟与真实容器。
  */
 @Composable
-fun App() {
+fun App(initialUrl: String? = null) {
     // 主题模式来自真实状态（护眼/夜间可切换并持久化）；未初始化前跟随系统
     var themeMode by remember { mutableStateOf<cn.ac.oac.glimbrowser.ui.theme.GlimThemeMode>(cn.ac.oac.glimbrowser.ui.theme.GlimThemeMode.SYSTEM) }
     GlimTheme(themeMode = themeMode) {
@@ -39,6 +39,12 @@ fun App() {
                 .getOrElse { cn.ac.oac.glimbrowser.securekey.FallbackInMemory }
         }
         val controller = remember { BrowserController(repository = repository, keyStore = keyStore) }
+        // 调试/自动化入口：GLIM_START_URL 启动即打开（用于桌面回归）
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            initialUrl?.takeIf { it.isNotBlank() }?.let {
+                controller.dispatch(cn.ac.oac.glimbrowser.logic.BrowserController.Event.OpenUrlInNewTab(it))
+            }
+        }
         // AI 运行时（BYOK 直连；真实 HttpClient 引擎注入）
         val aiRuntime = remember { cn.ac.oac.glimbrowser.ai.AiRuntime(keyStore) }
         // Phase 3：注入平台引擎工厂（Android WebView / iOS WKWebView 真实内核；桌面等平台 null → 诚实占位）
