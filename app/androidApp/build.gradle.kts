@@ -27,8 +27,8 @@ android {
         applicationId = "cn.ac.oac.glimbrowser"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 11
-        versionName = "0.0.1-alpha.11"
+        versionCode = 12
+        versionName = "0.0.1-alpha.12"
     }
     packaging {
         resources {
