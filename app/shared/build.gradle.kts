@@ -120,6 +120,22 @@ kotlin {
             implementation(libs.ktor.clientCio)
             implementation(libs.sqldelight.sqliteDriver)
             implementation(libs.compose.uiBackHandler)
+            // 桌面网页内核：JavaFX WebView（按当前平台加 native classifier）
+            val fxVersion = "21.0.5"
+            val osName = System.getProperty("os.name").lowercase()
+            val archName = System.getProperty("os.arch").lowercase()
+            val fxClassifier = when {
+                osName.contains("mac") && archName.contains("aarch64") -> "mac-aarch64"
+                osName.contains("mac") -> "mac"
+                osName.contains("win") -> "win"
+                else -> "linux"
+            }
+            implementation("org.openjfx:javafx-base:$fxVersion:$fxClassifier")
+            implementation("org.openjfx:javafx-graphics:$fxVersion:$fxClassifier")
+            implementation("org.openjfx:javafx-controls:$fxVersion:$fxClassifier")
+            implementation("org.openjfx:javafx-media:$fxVersion:$fxClassifier")
+            implementation("org.openjfx:javafx-web:$fxVersion:$fxClassifier")
+            implementation("org.openjfx:javafx-swing:$fxVersion:$fxClassifier")
         }
         jsMain.dependencies {
             implementation(libs.ktor.clientJs)
