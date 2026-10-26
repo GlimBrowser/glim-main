@@ -34,6 +34,9 @@ compose.desktop {
             packageName = "GlimBrowser"
             packageVersion = "1.0.0"
             description = "GlimBrowser"
+            // JavaFX（java.net.http / jdk.swing.interop）与 JCEF 都需要标准模块，
+            // 默认 jlink 裁掉了它们 → NoClassDefFoundError（alpha.14 崩溃）
+            includeAllModules = true
             vendor = "GlimBrowser"
 
             macOS {
