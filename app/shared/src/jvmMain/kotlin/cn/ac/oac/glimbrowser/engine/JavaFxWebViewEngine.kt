@@ -5,6 +5,7 @@ import javafx.concurrent.Worker
 import javafx.embed.swing.JFXPanel
 import javafx.scene.Scene
 import javafx.scene.web.WebView
+import javax.swing.SwingUtilities
 
 /**
  * 桌面（JVM）网页内核：**JavaFX WebView**。
@@ -66,6 +67,14 @@ class JavaFxWebViewEngine(
         }
     }
 
+    /**
+     * 回调统一切到 AWT 事件线程（Compose Desktop 的组合/渲染线程）。
+     * 若直接在 JavaFX 线程里 dispatch，会与 Compose 线程并发访问状态与 SQLDelight 连接 → 闪退。
+     */
+    private fun notifyAwt(block: () -> Unit) {
+        if (SwingUtilities.isEventDispatchThread()) block() else SwingUtilities.invokeLater(block)
+    }
+
     private fun fx(block: () -> Unit) {
         ensureToolkitStarted()
         if (Platform.isFxApplicationThread()) block() else Platform.runLater(block)
@@ -75,21 +84,21 @@ class JavaFxWebViewEngine(
         eng.locationProperty().addListener { _, _, v -> v?.let { lastUrl = it } }
         eng.titleProperty().addListener { _, _, v ->
             lastTitle = v
-            listener?.onReceivedTitle(v)
+            notifyAwt { listener?.onReceivedTitle(v) }
         }
         eng.loadWorker.progressProperty().addListener { _, _, p ->
-            listener?.onProgress(lastUrl, p.toFloat())
+            notifyAwt { listener?.onProgress(lastUrl, p.toFloat()) }
         }
         eng.loadWorker.stateProperty().addListener { _, _, s ->
             when (s) {
                 Worker.State.SUCCEEDED -> {
                     lastUrl = eng.location ?: lastUrl
-                    listener?.onProgress(lastUrl, 1f)
-                    listener?.onPageFinished(lastUrl, eng.title)
+                    notifyAwt { listener?.onProgress(lastUrl, 1f) }
+                    notifyAwt { listener?.onPageFinished(lastUrl, eng.title) }
                 }
                 Worker.State.FAILED -> {
                     val msg = eng.loadWorker.exception?.message ?: "网页加载失败"
-                    listener?.onError(lastUrl, msg)
+                    notifyAwt { listener?.onError(lastUrl, msg) }
                 }
                 else -> Unit
             }
@@ -101,7 +110,7 @@ class JavaFxWebViewEngine(
         )
         eng.locationProperty().addListener { _, _, _ -> updateNavFlags(eng) }
         // 滚动（供悬浮栏；桌面不依赖，保持接口完整）
-        view.setOnScroll { e -> listener?.onScroll(e.deltaY.toInt()) }
+        view.setOnScroll { e -> notifyAwt { listener?.onScroll(e.deltaY.toInt()) } }
     }
 
     override fun loadUrl(url: String) {
@@ -146,13 +155,13 @@ class JavaFxWebViewEngine(
     override fun findInPage(query: String) {
         val q = query.trim()
         lastFindQuery = q
-        if (q.isEmpty()) { listener?.onFindResult(0, 0); return }
+        if (q.isEmpty()) { notifyAwt { listener?.onFindResult(0, 0) }; return }
         fx {
             val text = (webEngine?.executeScript("document.body?document.body.innerText:''") as? String).orEmpty()
             val count = if (text.isEmpty()) 0 else Regex(Regex.escape(q), RegexOption.IGNORE_CASE).findAll(text).count()
             // 定位到第一个匹配（无 DOM 高亮）
             webEngine?.executeScript("window.find(${q.js()}, false, false, true, false, true, false)")
-            listener?.onFindResult(count, if (count > 0) 1 else 0)
+            notifyAwt { listener?.onFindResult(count, if (count > 0) 1 else 0) }
         }
     }
 
@@ -170,9 +179,9 @@ class JavaFxWebViewEngine(
     private var lastFindQuery: String = ""
 
     override fun download(url: String) {
-        listener?.onDownloadStart(url, url.substringAfterLast('/').ifBlank { "download" })
+        notifyAwt { listener?.onDownloadStart(url, url.substringAfterLast('/').ifBlank { "download" }) }
         openExternally(url)
-        listener?.onDownloadFinished(url, true)
+        notifyAwt { listener?.onDownloadFinished(url, true) }
     }
 
     override fun setDesktopMode(enabled: Boolean) {

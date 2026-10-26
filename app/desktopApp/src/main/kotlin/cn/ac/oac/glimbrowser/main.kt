@@ -8,7 +8,20 @@ import androidx.compose.ui.window.application
 import org.jetbrains.skia.Image
 import java.io.File
 
-fun main() = application {
+fun main() {
+    // 闪退诊断：把未捕获异常写入文件，便于用户回传（macOS: ~/GlimBrowser-crash.log）
+    Thread.setDefaultUncaughtExceptionHandler { t, e ->
+        runCatching {
+            val log = File(System.getProperty("user.home"), "GlimBrowser-crash.log")
+            log.appendText("\n=== ${java.time.LocalDateTime.now()} thread=${t.name} ===\n")
+            log.appendText(e.stackTraceToString())
+        }
+        e.printStackTrace()
+    }
+    desktopMain()
+}
+
+private fun desktopMain() = application {
     // 窗口/任务栏图标（资源里打包了 icon.png；缺失时退回默认，不崩）
     val icon = remember {
         runCatching {
