@@ -44,15 +44,29 @@ class JcefWebViewEngine(
     private var findQuery: String = ""
     /** 内核尚未就绪时先缓存目标 URL（初始化是异步的，UI 会立刻 loadUrl）。 */
     @Volatile private var pendingUrl: String? = null
+    /** JCEF 初始化失败时真正回退到 JavaFX 引擎（而不是只显示一行错误文字）。 */
+    @Volatile private var delegate: JavaFxWebViewEngine? = null
     private var ready = false
 
     init {
         Thread({
             runCatching { initCef() }.onFailure { t ->
-                SwingUtilities.invokeLater {
-                    panel.removeAll()
-                    panel.add(JLabel("Chromium 初始化失败：${t.message ?: t.javaClass.simpleName}（已回退到 JavaFX）"), BorderLayout.CENTER)
-                    panel.revalidate()
+                // 真回退：换成 JavaFX 引擎，浏览器继续可用
+                val fx = runCatching { JavaFxWebViewEngine(listener, isPrivate) }.getOrNull()
+                if (fx != null) {
+                    delegate = fx
+                    SwingUtilities.invokeLater {
+                        panel.removeAll()
+                        panel.add(fx.panel, BorderLayout.CENTER)
+                        panel.revalidate()
+                        panel.repaint()
+                    }
+                } else {
+                    SwingUtilities.invokeLater {
+                        panel.removeAll()
+                        panel.add(JLabel("网页内核初始化失败：${t.message ?: t.javaClass.simpleName}"), BorderLayout.CENTER)
+                        panel.revalidate()
+                    }
                 }
             }
         }, "glim-cef-init").apply { isDaemon = true }.start()
@@ -137,22 +151,27 @@ class JcefWebViewEngine(
     private fun jsEscape(s: String): String = "'" + s.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
     override fun loadUrl(url: String) {
+        delegate?.let { it.loadUrl(url); return }
         if (url == BrowserEngine.HOME_URL) return
         lastUrl = url
         val b = browser
         if (b != null) b.loadURL(url) else pendingUrl = url
     }
 
-    override fun canGoBack(): Boolean = canBack
-    override fun canGoForward(): Boolean = canForward
-    override fun goBack() { browser?.goBack() }
-    override fun goForward() { browser?.goForward() }
-    override fun reload() { browser?.reload() }
-    override fun currentTitle(): String? = lastTitle
-    override fun currentUrl(): String? = lastUrl
-    override fun setListener(listener: BrowserEngine.Listener?) { this.listener = listener }
+    override fun canGoBack(): Boolean = delegate?.canGoBack() ?: canBack
+    override fun canGoForward(): Boolean = delegate?.canGoForward() ?: canForward
+    override fun goBack() { delegate?.goBack() ?: browser?.goBack() }
+    override fun goForward() { delegate?.goForward() ?: browser?.goForward() }
+    override fun reload() { delegate?.reload() ?: browser?.reload() }
+    override fun currentTitle(): String? = delegate?.currentTitle() ?: lastTitle
+    override fun currentUrl(): String? = delegate?.currentUrl() ?: lastUrl
+    override fun setListener(listener: BrowserEngine.Listener?) {
+        this.listener = listener
+        delegate?.setListener(listener)
+    }
 
     override fun findInPage(query: String) {
+        delegate?.let { it.findInPage(query); return }
         findQuery = query
         val b = browser ?: return
         val q = query
@@ -167,21 +186,25 @@ class JcefWebViewEngine(
     }
 
     override fun findNext() {
+        delegate?.let { it.findNext(); return }
         if (findQuery.isNotBlank()) browser?.find(findQuery, true, false, true)
     }
 
     override fun clearFind() {
+        delegate?.let { it.clearFind(); return }
         browser?.stopFinding(true)
         findQuery = ""
     }
 
     override fun download(url: String) {
+        delegate?.let { it.download(url); return }
         notifyAwt { listener?.onDownloadStart(url, url.substringAfterLast('/').ifBlank { "download" }) }
         openExternally(url)
         notifyAwt { listener?.onDownloadFinished(url, true) }
     }
 
     override fun setDesktopMode(enabled: Boolean) {
+        delegate?.let { it.setDesktopMode(enabled); return }
         // CEF 的 UA 需在建进程前设置；运行时用 JS 标记
         browser?.executeJavaScript(
             "document.documentElement.dataset.glimDesktop='${if (enabled) "1" else "0"}';", "glim://ua", 0,
@@ -189,6 +212,7 @@ class JcefWebViewEngine(
     }
 
     override fun setDarkMode(enabled: Boolean) {
+        delegate?.let { it.setDarkMode(enabled); return }
         browser?.executeJavaScript(
             "(function(){try{document.documentElement.style.colorScheme='${if (enabled) "dark" else "light"}';}catch(e){}})()",
             "glim://dark", 0,
@@ -196,6 +220,7 @@ class JcefWebViewEngine(
     }
 
     override fun setForceDarkWeb(enabled: Boolean, appDark: Boolean) {
+        delegate?.let { it.setForceDarkWeb(enabled, appDark); return }
         val js = if (!enabled || !appDark) {
             "(function(){var s=document.getElementById('glim-force-dark');if(s)s.remove();})()"
         } else {
@@ -207,6 +232,7 @@ class JcefWebViewEngine(
     }
 
     override fun clearCache() {
+        delegate?.let { it.clearCache(); return }
         browser?.executeJavaScript(
             "(function(){try{caches.keys().then(function(k){k.forEach(function(n){caches.delete(n)})});" +
                 "if(navigator.serviceWorker)serviceWorker.getRegistrations().then(function(r){r.forEach(function(x){x.unregister()})});" +
@@ -216,6 +242,7 @@ class JcefWebViewEngine(
     }
 
     override fun evaluatePageText(onResult: (String?) -> Unit) {
+        delegate?.let { it.evaluatePageText(onResult); return }
         val b = browser
         if (b == null) { onResult(null); return }
         b.getText(object : CefStringVisitor {
@@ -226,6 +253,7 @@ class JcefWebViewEngine(
     }
 
     override fun evaluatePluginScript(scriptId: String, source: String, permissions: Set<String>) {
+        delegate?.let { it.evaluatePluginScript(scriptId, source, permissions); return }
         val bridge = """
             (function(){
               var Glim = {
